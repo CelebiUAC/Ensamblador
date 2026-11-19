@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>AR-2 Visual Studio | Editor de Bloques para Microprocesador AR-2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -47,17 +47,24 @@
         }
         /* Puertos de conexión */
         .port {
-            width: 14px;
-            height: 14px;
+            width: 16px;
+            height: 16px;
             border-radius: 50%;
             border: 2px solid #0f1422;
             cursor: crosshair;
             transition: transform 0.15s ease, background-color 0.15s ease;
             z-index: 30;
+            touch-action: none;
         }
-        .port:hover {
-            transform: scale(1.35);
-            box-shadow: 0 0 8px currentColor;
+        @media (min-width: 1024px) {
+            .port {
+                width: 14px;
+                height: 14px;
+            }
+        }
+        .port:hover, .port.port-active {
+            transform: translateY(-50%) scale(1.35) !important;
+            box-shadow: 0 0 10px currentColor;
         }
         /* Cables SVG */
         svg#wires-layer {
@@ -110,6 +117,7 @@
         }
         body.light-mode header,
         body.light-mode aside,
+        body.light-mode nav#mobile-nav,
         body.light-mode aside > div.bg-slate-900 {
             background-color: rgba(255, 255, 255, 0.96) !important;
             border-color: #cbd5e1 !important;
@@ -216,50 +224,70 @@
         }
     </style>
 </head>
-<body class="h-screen flex flex-col">
+<body class="h-[100dvh] flex flex-col">
 
-    <!-- Barra Superior -->
-    <header class="h-14 bg-slate-900/95 border-b border-slate-800 px-4 flex items-center justify-between shrink-0 z-30">
-        <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/20">
+    <!-- Barra Superior Responsiva -->
+    <header class="min-h-14 bg-slate-900/95 border-b border-slate-800 px-3 sm:px-4 py-2 lg:py-0 flex flex-wrap items-center justify-between gap-2 shrink-0 z-30">
+        <div class="flex items-center gap-2.5 min-w-0">
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-bold text-white text-xs sm:text-sm shadow-lg shadow-blue-500/20 shrink-0">
                 AR2
             </div>
-            <div>
-                <h1 class="font-bold text-sm sm:text-base text-white tracking-tight flex items-center gap-2">
-                    AR-2 Visual Studio
-                    <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">RAM 32B • 5-Bit</span>
+            <div class="min-w-0">
+                <h1 class="font-bold text-sm sm:text-base text-white tracking-tight flex items-center gap-1.5 sm:gap-2 truncate">
+                    <span class="truncate">AR-2 Visual Studio</span>
+                    <span class="hidden sm:inline-block text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 shrink-0">RAM 32B • 5-Bit</span>
                 </h1>
-                <p class="text-[11px] text-slate-400 hidden sm:block">Programación Visual por Nodos para Microprocesador AR-2</p>
+                <p class="text-[11px] text-slate-400 hidden md:block">Programación Visual por Nodos para Microprocesador AR-2</p>
             </div>
         </div>
 
-        <div class="flex items-center gap-2">
-            <button onclick="loadExampleMax5()" class="px-3 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-medium transition flex items-center gap-1.5">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                <span>Ejemplo: Mayor de 5 Números</span>
+        <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <button onclick="loadExampleMax5()" class="px-2.5 sm:px-3 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-[11px] sm:text-xs font-medium transition flex items-center gap-1 sm:gap-1.5 whitespace-nowrap">
+                <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                <span class="sm:hidden">Ej. Max 5</span>
+                <span class="hidden sm:inline">Ejemplo: Mayor de 5 Números</span>
             </button>
-            <button onclick="loadExampleSum2()" class="hidden md:flex px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-medium transition items-center gap-1.5">
+            <button onclick="loadExampleSum2()" class="hidden xl:flex px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-medium transition items-center gap-1.5 whitespace-nowrap">
                 <span>Ejemplo: Suma + Constante</span>
             </button>
-            <button onclick="clearCanvas()" class="px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-xs font-medium transition">
-                Limpiar Pizarra
+            <button onclick="clearCanvas()" class="px-2.5 sm:px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-[11px] sm:text-xs font-medium transition whitespace-nowrap">
+                <span class="sm:hidden">Limpiar</span>
+                <span class="hidden sm:inline">Limpiar Pizarra</span>
             </button>
             <button id="theme-toggle-btn" onclick="toggleTheme()" title="Cambiar entre modo oscuro y claro"
-                    class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium transition flex items-center gap-1.5 cursor-pointer">
+                    class="px-2.5 sm:px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium transition flex items-center gap-1.5 cursor-pointer shrink-0">
                 <span id="theme-icon">☀️</span>
-                <span id="theme-label" class="hidden sm:inline">Modo Claro</span>
+                <span id="theme-label" class="hidden md:inline">Modo Claro</span>
             </button>
         </div>
     </header>
 
-    <!-- Cuerpo Principal (3 Columnas) -->
-    <div class="flex-1 flex overflow-hidden">
+    <!-- Selector de Vistas para Celular / Tablet (< 1024px) -->
+    <nav id="mobile-nav" class="lg:hidden grid grid-cols-3 bg-slate-900 border-b border-slate-800 text-xs font-semibold shrink-0 z-20">
+        <button id="mob-tab-palette" onclick="setMobileView('palette')" class="py-2.5 px-2 text-center border-b-2 border-transparent text-slate-400 flex items-center justify-center gap-1.5">
+            <span>🧩</span>
+            <span>Bloques</span>
+        </button>
+        <button id="mob-tab-canvas" onclick="setMobileView('canvas')" class="py-2.5 px-2 text-center border-b-2 border-sky-500 text-sky-400 bg-slate-800/40 flex items-center justify-center gap-1.5">
+            <span>🔗</span>
+            <span>Pizarra</span>
+        </button>
+        <button id="mob-tab-compiler" onclick="setMobileView('compiler')" class="py-2.5 px-2 text-center border-b-2 border-transparent text-slate-400 flex items-center justify-center gap-1.5">
+            <span>⚙️</span>
+            <span>Compilador</span>
+        </button>
+    </nav>
+
+    <!-- Cuerpo Principal (1 columna en móvil con pestañas, 3 columnas en escritorio lg:) -->
+    <div class="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
         
         <!-- Panel Izquierdo: Paleta de Cajas Arrastrables -->
-        <aside class="w-60 bg-slate-900/90 border-r border-slate-800 flex flex-col shrink-0 z-20">
-            <div class="p-3 border-b border-slate-800">
-                <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Bloques Disponibles</h2>
-                <p class="text-[11px] text-slate-500 mt-0.5">Arrastra a la pizarra o haz clic</p>
+        <aside id="panel-palette" class="hidden lg:flex w-full lg:w-60 flex-1 lg:flex-initial bg-slate-900/90 border-b lg:border-b-0 lg:border-r border-slate-800 flex-col shrink-0 z-20 overflow-hidden">
+            <div class="p-3 border-b border-slate-800 flex items-center justify-between">
+                <div>
+                    <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Bloques Disponibles</h2>
+                    <p class="text-[11px] text-slate-500 mt-0.5">Arrastra o toca para agregar a pizarra</p>
+                </div>
             </div>
             
             <div class="p-3 space-y-2.5 overflow-y-auto flex-1">
@@ -337,7 +365,7 @@
 
                 <!-- BOTÓN ADICIONAL PARA AGREGAR NUEVAS OPERACIONES SEGÚN EL MICROPROCESADOR AR-2 -->
                 <button onclick="openNewOpModal()"
-                        class="w-full py-2 px-3 rounded-xl bg-cyan-950/50 hover:bg-cyan-900/60 border border-dashed border-cyan-500/50 text-cyan-300 text-xs font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm">
+                        class="w-full py-2.5 px-3 rounded-xl bg-cyan-950/50 hover:bg-cyan-900/60 border border-dashed border-cyan-500/50 text-cyan-300 text-xs font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm">
                     <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                     <span>Nueva Operación AR-2</span>
                 </button>
@@ -363,38 +391,40 @@
             <!-- Ayuda rápida -->
             <div class="p-3 bg-slate-950/60 border-t border-slate-800 text-[11px] text-slate-400 space-y-1">
                 <div class="font-semibold text-slate-300">Controles:</div>
-                <div>• Arrastra desde puerto <span class="text-sky-400">●</span> derecho a <span class="text-amber-400">●</span> izquierdo para unir.</div>
-                <div>• Clic sobre un cable para eliminarlo.</div>
+                <div>• Arrastra o toca puerto <span class="text-sky-400">●</span> derecho a <span class="text-amber-400">●</span> izquierdo para unir.</div>
+                <div>• Toca sobre un cable para eliminarlo.</div>
             </div>
         </aside>
 
-        <!-- Lienzo Central: Pizarra de Nodos -->
-        <main id="workspace" class="flex-1 relative canvas-grid overflow-hidden"
+        <!-- Lienzo Central: Pizarra de Nodos (Desplazable en móvil) -->
+        <main id="workspace" class="flex-1 relative canvas-grid overflow-auto lg:overflow-hidden"
               ondragover="event.preventDefault()" ondrop="onCanvasDrop(event)">
             
-            <!-- Capa SVG para cables -->
-            <svg id="wires-layer">
-                <defs>
-                    <linearGradient id="wireGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stop-color="#38bdf8" />
-                        <stop offset="100%" stop-color="#fbbf24" />
-                    </linearGradient>
-                </defs>
-                <g id="connections-group"></g>
-                <path id="temp-wire" class="wire-path" stroke="#38bdf8" stroke-dasharray="6,4" d="" style="display:none; pointer-events:none;"></path>
-            </svg>
+            <div id="canvas-stage" class="relative min-w-[880px] min-h-[580px] lg:min-w-0 lg:min-h-0 w-full h-full">
+                <!-- Capa SVG para cables -->
+                <svg id="wires-layer" class="w-full h-full">
+                    <defs>
+                        <linearGradient id="wireGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stop-color="#38bdf8" />
+                            <stop offset="100%" stop-color="#fbbf24" />
+                        </linearGradient>
+                    </defs>
+                    <g id="connections-group"></g>
+                    <path id="temp-wire" class="wire-path" stroke="#38bdf8" stroke-dasharray="6,4" d="" style="display:none; pointer-events:none;"></path>
+                </svg>
 
-            <!-- Contenedor de Nodos -->
-            <div id="nodes-container" class="w-full h-full relative"></div>
+                <!-- Contenedor de Nodos -->
+                <div id="nodes-container" class="w-full h-full relative"></div>
+            </div>
 
             <!-- Mensaje flotante / Toast -->
-            <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-slate-800 border border-slate-600 text-xs text-white shadow-xl opacity-0 pointer-events-none transition-opacity duration-300 z-50">
+            <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-slate-800 border border-slate-600 text-xs text-white shadow-xl opacity-0 pointer-events-none transition-opacity duration-300 z-50 max-w-[90vw] text-center">
                 Mensaje
             </div>
         </main>
 
         <!-- Panel Derecho: Compilador, Ensamblador y Exportación Logisim -->
-        <aside class="w-80 sm:w-96 bg-slate-900/95 border-l border-slate-800 flex flex-col shrink-0 z-20">
+        <aside id="panel-compiler" class="hidden lg:flex w-full lg:w-96 flex-1 lg:flex-initial bg-slate-900/95 border-t lg:border-t-0 lg:border-l border-slate-800 flex-col shrink-0 z-20 overflow-hidden">
             <div class="p-3 border-b border-slate-800 flex items-center justify-between">
                 <div>
                     <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-300">Compilador AR-2</h2>
@@ -407,11 +437,11 @@
 
             <!-- Estado / Alertas de compilación -->
             <div id="compile-status" class="px-3 py-2 bg-emerald-950/30 border-b border-emerald-500/20 text-[11px] text-emerald-300 flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span>Listo para compilar</span>
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
+                <span class="truncate">Listo para compilar</span>
             </div>
 
-            <!-- Pestañas de Vista (Incluye nueva pestaña Python) -->
+            <!-- Pestañas de Vista (Incluye pestaña Python) -->
             <div class="flex border-b border-slate-800 text-[11px] font-medium">
                 <button id="tab-btn-hex" onclick="switchTab('hex')" class="flex-1 py-2 px-1 text-center border-b-2 border-blue-500 text-blue-400 bg-slate-800/40 truncate">
                     Logisim (.hex)
@@ -468,8 +498,8 @@
 
                 <!-- Tab 4: Código Python -> Auto-Graficado + Ensamblador + Logisim -->
                 <div id="tab-py" class="hidden space-y-3">
-                    <div class="flex items-center justify-between">
-                        <span class="text-[11px] font-semibold text-amber-300">Código Python para AR-2:</span>
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="text-[11px] font-semibold text-amber-300 truncate">Código Python para AR-2:</span>
                         <select id="py-presets" onchange="loadPythonPreset(this.value)" class="bg-slate-800 border border-slate-700 text-[10px] text-slate-200 rounded px-2 py-1 focus:outline-none">
                             <option value="mcd">MCD Iterativo (Euclides)</option>
                             <option value="max3">Mayor de 3 entradas</option>
@@ -479,7 +509,7 @@
                         </select>
                     </div>
 
-                    <textarea id="python-code-input" rows="10" spellcheck="false"
+                    <textarea id="python-code-input" rows="9" spellcheck="false"
                               placeholder="# Escribe código Python compatible con AR-2..."
                               class="selectable w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 focus:border-amber-500 focus:outline-none font-mono text-xs text-amber-200 leading-relaxed resize-y">def mcd_iterativo(a: int, b: int) -> int:
     a, b = abs(a), abs(b)
@@ -491,8 +521,8 @@
 print(mcd_iterativo(105, 70))  # 35</textarea>
 
                     <button type="button" onclick="compilePythonToAR2()"
-                            class="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-semibold text-xs shadow-lg shadow-amber-900/30 transition flex items-center justify-center gap-2 cursor-pointer">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            class="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-semibold text-xs shadow-lg shadow-amber-900/30 transition flex items-center justify-center gap-2 cursor-pointer">
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         <span>Graficar Bloques y Generar AR-2</span>
                     </button>
 
@@ -510,7 +540,7 @@ print(mcd_iterativo(105, 70))  # 35</textarea>
             <!-- Botón Principal de Descarga -->
             <div class="p-3 border-t border-slate-800 bg-slate-900">
                 <button onclick="downloadHexFile()" class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold text-xs sm:text-sm shadow-lg shadow-emerald-900/40 transition flex items-center justify-center gap-2 cursor-pointer">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                     <span>Descargar memoria_ar2.hex</span>
                 </button>
             </div>
@@ -519,7 +549,7 @@ print(mcd_iterativo(105, 70))  # 35</textarea>
 
     <!-- MODAL PARA AGREGAR NUEVA OPERACIÓN SEGÚN ARQUITECTURA AR-2 -->
     <div id="new-op-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
-        <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full max-h-[90dvh] overflow-y-auto p-5 shadow-2xl space-y-4">
             <div class="flex items-center justify-between border-b border-slate-800 pb-3">
                 <div>
                     <h3 class="text-sm font-bold text-white flex items-center gap-2">
@@ -528,7 +558,7 @@ print(mcd_iterativo(105, 70))  # 35</textarea>
                     </h3>
                     <p class="text-[11px] text-slate-400 mt-0.5">Sintetizada con instrucciones nativas (ADD, SUB, JZ, JPOS)</p>
                 </div>
-                <button onclick="closeNewOpModal()" class="text-slate-400 hover:text-white">✕</button>
+                <button onclick="closeNewOpModal()" class="text-slate-400 hover:text-white p-1">✕</button>
             </div>
 
             <div class="space-y-3 text-xs">
@@ -574,6 +604,56 @@ print(mcd_iterativo(105, 70))  # 35</textarea>
     </div>
 
     <script>
+        // =========================================================================
+        // NAVEGACIÓN RESPONSIVA EN MÓVIL / TABLET (< 1024px)
+        // =========================================================================
+        let activeMobileView = 'canvas';
+
+        function isMobileViewport() {
+            return window.innerWidth < 1024;
+        }
+
+        function setMobileView(view) {
+            activeMobileView = view;
+            const paletteEl = document.getElementById('panel-palette');
+            const canvasEl = document.getElementById('workspace');
+            const compilerEl = document.getElementById('panel-compiler');
+
+            ['palette', 'canvas', 'compiler'].forEach(v => {
+                const btn = document.getElementById(`mob-tab-${v}`);
+                if (!btn) return;
+                if (v === view) {
+                    btn.classList.add('border-sky-500', 'text-sky-400', 'bg-slate-800/40');
+                    btn.classList.remove('border-transparent', 'text-slate-400');
+                } else {
+                    btn.classList.remove('border-sky-500', 'text-sky-400', 'bg-slate-800/40');
+                    btn.classList.add('border-transparent', 'text-slate-400');
+                }
+            });
+
+            if (isMobileViewport()) {
+                paletteEl.classList.toggle('hidden', view !== 'palette');
+                paletteEl.classList.toggle('flex', view === 'palette');
+
+                canvasEl.classList.toggle('hidden', view !== 'canvas');
+
+                compilerEl.classList.toggle('hidden', view !== 'compiler');
+                compilerEl.classList.toggle('flex', view === 'compiler');
+
+                if (view === 'canvas') {
+                    renderWires();
+                    requestAnimationFrame(renderWires);
+                }
+            } else {
+                paletteEl.classList.remove('hidden');
+                paletteEl.classList.add('flex');
+                canvasEl.classList.remove('hidden');
+                compilerEl.classList.remove('hidden');
+                compilerEl.classList.add('flex');
+                renderWires();
+            }
+        }
+
         // =========================================================================
         // CAMBIO ENTRE MODO OSCURO Y MODO CLARO
         // =========================================================================
@@ -830,8 +910,8 @@ print(mcd_iterativo(105, 70))  # 35</textarea>
             const badge = document.getElementById('new-op-badge').value.trim() || OP_PRESET_DETAILS[opType].badge;
 
             registerCustomOpInPalette(opType, title, badge);
-            spawnNodeAtCenter(opType);
             closeNewOpModal();
+            spawnNodeAtCenter(opType);
             showToast(`Operación "${title}" agregada a la paleta y pizarra`);
         }
 
@@ -880,10 +960,18 @@ print(mcd_iterativo(105, 70))  # 35</textarea>
         }
 
         function spawnNodeAtCenter(type) {
+            if (isMobileViewport() && activeMobileView !== 'canvas') {
+                setMobileView('canvas');
+            }
             const ws = document.getElementById('workspace');
             const rect = ws.getBoundingClientRect();
             const offset = (nodes.length % 6) * 25;
-            createNode(type, (rect.width / 2) - 105 + offset, (rect.height / 2) - 60 + offset);
+            const centerX = ws.scrollLeft + Math.max(40, (rect.width / 2) - 105) + offset;
+            const centerY = ws.scrollTop + Math.max(30, (rect.height / 2) - 60) + offset;
+            createNode(type, centerX, centerY);
+            if (isMobileViewport()) {
+                showToast(`Bloque "${NODE_CONFIG[type].title}" agregado a la pizarra`);
+            }
         }
 
         function onPaletteDragStart(e, type) {
@@ -896,8 +984,8 @@ print(mcd_iterativo(105, 70))  # 35</textarea>
             if (!type) return;
             const ws = document.getElementById('workspace');
             const rect = ws.getBoundingClientRect();
-            const x = e.clientX - rect.left - 105;
-            const y = e.clientY - rect.top - 25;
+            const x = (e.clientX - rect.left) + ws.scrollLeft - 105;
+            const y = (e.clientY - rect.top) + ws.scrollTop - 25;
             createNode(type, x, y);
         }
 
@@ -934,7 +1022,7 @@ print(mcd_iterativo(105, 70))  # 35</textarea>
                         <div class="space-y-1.5">
                             <label class="text-[10px] uppercase tracking-wider text-slate-400 block">Cantidad de lecturas:</label>
                             <input type="number" min="1" max="20" value="${node.count}"
-                                   onmousedown="event.stopPropagation()"
+                                   onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()"
                                    onchange="updateNodeProp('${node.id}', 'count', this.value)"
                                    class="w-full px-2 py-1 rounded bg-slate-950 border border-slate-700 text-xs font-mono text-blue-300 focus:outline-none focus:border-blue-500">
                             <p class="text-[10px] text-slate-400">${node.count > 1 ? `Bucle de ${node.count} entradas` : '1 lectura de teclado'}</p>
@@ -947,14 +1035,14 @@ print(mcd_iterativo(105, 70))  # 35</textarea>
                                 <div>
                                     <label class="text-[10px] text-slate-400 block">Nombre</label>
                                     <input type="text" value="${node.name}"
-                                           onmousedown="event.stopPropagation()"
+                                           onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()"
                                            oninput="updateNodeProp('${node.id}', 'name', this.value)"
                                            class="w-full px-2 py-1 rounded bg-slate-950 border border-slate-700 text-xs font-mono text-purple-300 focus:outline-none focus:border-purple-500">
                                 </div>
                                 <div>
                                     <label class="text-[10px] text-slate-400 block">Dir. RAM (0-31)</label>
                                     <input type="number" min="0" max="31" value="${node.ramAddr}"
-                                           onmousedown="event.stopPropagation()"
+                                           onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()"
                                            onchange="updateNodeProp('${node.id}', 'ramAddr', this.value)"
                                            class="w-full px-2 py-1 rounded bg-slate-950 border border-slate-700 text-xs font-mono text-purple-300 focus:outline-none focus:border-purple-500">
                                 </div>
@@ -962,7 +1050,7 @@ print(mcd_iterativo(105, 70))  # 35</textarea>
                             <div>
                                 <label class="text-[10px] text-slate-400 block">Valor Inicial (0 - 255)</label>
                                 <input type="number" min="0" max="255" value="${node.value}"
-                                       onmousedown="event.stopPropagation()"
+                                       onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()"
                                        onchange="updateNodeProp('${node.id}', 'value', this.value)"
                                        class="w-full px-2 py-1 rounded bg-slate-950 border border-slate-700 text-xs font-mono text-white focus:outline-none focus:border-purple-500">
                             </div>
@@ -1026,13 +1114,16 @@ print(mcd_iterativo(105, 70))  # 35</textarea>
                     `;
                 }
 
+                const isSourceSelected = connectingFromNodeId === node.id;
+
                 el.innerHTML = `
-                    <div class="px-3 py-2 rounded-t-[10px] ${cfg.headerBg} flex items-center justify-between cursor-move"
-                         onmousedown="startDragNode(event, '${node.id}')">
+                    <div class="px-3 py-2 rounded-t-[10px] ${cfg.headerBg} flex items-center justify-between cursor-move touch-none"
+                         onmousedown="startDragNode(event, '${node.id}')"
+                         ontouchstart="startDragNodeTouch(event, '${node.id}')">
                         <span class="text-xs font-bold tracking-tight">${cfg.title}</span>
                         <div class="flex items-center gap-1.5">
                             <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/30">${cfg.badge}</span>
-                            <button onclick="deleteNode('${node.id}')" onmousedown="event.stopPropagation()"
+                            <button onclick="deleteNode('${node.id}')" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()"
                                     class="text-slate-400 hover:text-rose-400 transition p-0.5" title="Eliminar caja">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                             </button>
@@ -1043,8 +1134,9 @@ print(mcd_iterativo(105, 70))  # 35</textarea>
                         ${cfg.hasIn ? `
                             <div id="in_${node.id}" data-node="${node.id}" data-port="in"
                                  onmouseup="finishConnection(event, '${node.id}')"
-                                 title="Puerto de Entrada (Suelta el cable aquí)"
-                                 style="background-color: #fbbf24; left: -7px; top: 50%; transform: translateY(-50%);"
+                                 onclick="handleInputPortTap(event, '${node.id}')"
+                                 title="Puerto de Entrada (Suelta o toca aquí para unir)"
+                                 style="background-color: #fbbf24; left: -8px; top: 50%; transform: translateY(-50%);"
                                  class="port absolute"></div>
                         ` : ''}
 
@@ -1053,9 +1145,10 @@ print(mcd_iterativo(105, 70))  # 35</textarea>
                         ${cfg.hasOut ? `
                             <div id="out_${node.id}" data-node="${node.id}" data-port="out"
                                  onmousedown="startConnection(event, '${node.id}')"
-                                 title="Puerto de Salida (Arrastra hacia otra caja)"
-                                 style="background-color: ${cfg.portColor}; right: -7px; top: 50%; transform: translateY(-50%);"
-                                 class="port absolute"></div>
+                                 ontouchstart="startConnectionTouch(event, '${node.id}')"
+                                 title="Puerto de Salida (Arrastra o toca hacia otra caja)"
+                                 style="background-color: ${cfg.portColor}; right: -8px; top: 50%; transform: translateY(-50%);"
+                                 class="port absolute ${isSourceSelected ? 'port-active' : ''}"></div>
                         ` : ''}
                     </div>
                 `;
@@ -1068,13 +1161,14 @@ print(mcd_iterativo(105, 70))  # 35</textarea>
         }
 
         function getPortPosition(nodeId, portType) {
-            const ws = document.getElementById('workspace').getBoundingClientRect();
+            const wsEl = document.getElementById('workspace');
+            const ws = wsEl.getBoundingClientRect();
             const portEl = document.getElementById(`${portType}_${nodeId}`);
             if (!portEl) return { x: 0, y: 0 };
             const rect = portEl.getBoundingClientRect();
             return {
-                x: rect.left - ws.left + rect.width / 2,
-                y: rect.top - ws.top + rect.height / 2
+                x: (rect.left - ws.left) + wsEl.scrollLeft + rect.width / 2,
+                y: (rect.top - ws.top) + wsEl.scrollTop + rect.height / 2
             };
         }
 
@@ -1096,7 +1190,7 @@ print(mcd_iterativo(105, 70))  # 35</textarea>
                 path.setAttribute('d', d);
                 path.setAttribute('class', 'wire-path');
                 path.setAttribute('stroke', 'url(#wireGrad)');
-                path.setAttribute('title', 'Clic para desconectar');
+                path.setAttribute('title', 'Clic o toca para desconectar');
                 path.onclick = () => {
                     connections = connections.filter(c => c.id !== conn.id);
                     renderAll();
@@ -1108,16 +1202,34 @@ print(mcd_iterativo(105, 70))  # 35</textarea>
         }
 
         // =========================================================================
-        // INTERACCIÓN DE ARRASTRE DE NODOS Y CONEXIÓN DE CABLES
+        // INTERACCIÓN DE ARRASTRE Y CONEXIÓN (RATÓN + TÁCTIL EN CELULAR)
         // =========================================================================
+        let touchMovedWire = false;
+
         function startDragNode(e, nodeId) {
             e.stopPropagation();
             selectedNodeId = nodeId;
             draggingNode = nodes.find(n => n.id === nodeId);
-            const ws = document.getElementById('workspace').getBoundingClientRect();
-            dragOffset.x = (e.clientX - ws.left) - draggingNode.x;
-            dragOffset.y = (e.clientY - ws.top) - draggingNode.y;
+            const wsEl = document.getElementById('workspace');
+            const ws = wsEl.getBoundingClientRect();
+            dragOffset.x = ((e.clientX - ws.left) + wsEl.scrollLeft) - draggingNode.x;
+            dragOffset.y = ((e.clientY - ws.top) + wsEl.scrollTop) - draggingNode.y;
             
+            document.querySelectorAll('.node-card').forEach(c => c.classList.remove('selected'));
+            document.getElementById(nodeId).classList.add('selected');
+        }
+
+        function startDragNodeTouch(e, nodeId) {
+            if (e.touches.length !== 1) return;
+            e.stopPropagation();
+            const touch = e.touches[0];
+            selectedNodeId = nodeId;
+            draggingNode = nodes.find(n => n.id === nodeId);
+            const wsEl = document.getElementById('workspace');
+            const ws = wsEl.getBoundingClientRect();
+            dragOffset.x = ((touch.clientX - ws.left) + wsEl.scrollLeft) - draggingNode.x;
+            dragOffset.y = ((touch.clientY - ws.top) + wsEl.scrollTop) - draggingNode.y;
+
             document.querySelectorAll('.node-card').forEach(c => c.classList.remove('selected'));
             document.getElementById(nodeId).classList.add('selected');
         }
@@ -1129,6 +1241,26 @@ print(mcd_iterativo(105, 70))  # 35</textarea>
             const tempWire = document.getElementById('temp-wire');
             tempWire.style.display = 'block';
             tempWire.setAttribute('d', createBezierPath(p1.x, p1.y, p1.x, p1.y));
+        }
+
+        function startConnectionTouch(e, nodeId) {
+            e.stopPropagation();
+            e.preventDefault();
+            touchMovedWire = false;
+            connectingFromNodeId = nodeId;
+            renderAll();
+            const p1 = getPortPosition(nodeId, 'out');
+            const tempWire = document.getElementById('temp-wire');
+            tempWire.style.display = 'block';
+            tempWire.setAttribute('d', createBezierPath(p1.x, p1.y, p1.x, p1.y));
+            showToast('Arrastra hacia un puerto amarillo ● o tócalo para conectar');
+        }
+
+        function handleInputPortTap(e, targetNodeId) {
+            e.stopPropagation();
+            if (connectingFromNodeId && connectingFromNodeId !== targetNodeId) {
+                finishConnection(e, targetNodeId);
+            }
         }
 
         function finishConnection(e, targetNodeId) {
@@ -1145,8 +1277,11 @@ print(mcd_iterativo(105, 70))  # 35</textarea>
                     fromNode: connectingFromNodeId,
                     toNode: targetNodeId
                 });
+                connectingFromNodeId = null;
+                document.getElementById('temp-wire').style.display = 'none';
                 renderAll();
                 compileGraph();
+                return;
             }
             cancelConnection();
         }
@@ -1155,16 +1290,20 @@ print(mcd_iterativo(105, 70))  # 35</textarea>
             connectingFromNodeId = null;
             const tempWire = document.getElementById('temp-wire');
             tempWire.style.display = 'none';
+            renderAll();
         }
 
         window.addEventListener('mousemove', (e) => {
-            const ws = document.getElementById('workspace').getBoundingClientRect();
-            const mouseX = e.clientX - ws.left;
-            const mouseY = e.clientY - ws.top;
+            const wsEl = document.getElementById('workspace');
+            const ws = wsEl.getBoundingClientRect();
+            const mouseX = (e.clientX - ws.left) + wsEl.scrollLeft;
+            const mouseY = (e.clientY - ws.top) + wsEl.scrollTop;
 
             if (draggingNode) {
-                draggingNode.x = Math.max(0, Math.min(ws.width - 210, mouseX - dragOffset.x));
-                draggingNode.y = Math.max(0, Math.min(ws.height - 90, mouseY - dragOffset.y));
+                const maxW = Math.max(ws.width, wsEl.scrollWidth) - 210;
+                const maxH = Math.max(ws.height, wsEl.scrollHeight) - 90;
+                draggingNode.x = Math.max(0, Math.min(maxW, mouseX - dragOffset.x));
+                draggingNode.y = Math.max(0, Math.min(maxH, mouseY - dragOffset.y));
                 const el = document.getElementById(draggingNode.id);
                 if (el) {
                     el.style.left = `${draggingNode.x}px`;
@@ -1178,10 +1317,54 @@ print(mcd_iterativo(105, 70))  # 35</textarea>
             }
         });
 
+        window.addEventListener('touchmove', (e) => {
+            if (!draggingNode && !connectingFromNodeId) return;
+            if (e.touches.length !== 1) return;
+            e.preventDefault();
+            const touch = e.touches[0];
+            const wsEl = document.getElementById('workspace');
+            const ws = wsEl.getBoundingClientRect();
+            const touchX = (touch.clientX - ws.left) + wsEl.scrollLeft;
+            const touchY = (touch.clientY - ws.top) + wsEl.scrollTop;
+
+            if (draggingNode) {
+                const maxW = Math.max(ws.width, wsEl.scrollWidth) - 210;
+                const maxH = Math.max(ws.height, wsEl.scrollHeight) - 90;
+                draggingNode.x = Math.max(0, Math.min(maxW, touchX - dragOffset.x));
+                draggingNode.y = Math.max(0, Math.min(maxH, touchY - dragOffset.y));
+                const el = document.getElementById(draggingNode.id);
+                if (el) {
+                    el.style.left = `${draggingNode.x}px`;
+                    el.style.top = `${draggingNode.y}px`;
+                }
+                renderWires();
+            } else if (connectingFromNodeId) {
+                touchMovedWire = true;
+                const p1 = getPortPosition(connectingFromNodeId, 'out');
+                const tempWire = document.getElementById('temp-wire');
+                tempWire.setAttribute('d', createBezierPath(p1.x, p1.y, touchX, touchY));
+            }
+        }, { passive: false });
+
         window.addEventListener('mouseup', () => {
             draggingNode = null;
             if (connectingFromNodeId) {
                 cancelConnection();
+            }
+        });
+
+        window.addEventListener('touchend', (e) => {
+            draggingNode = null;
+            if (connectingFromNodeId && touchMovedWire && e.changedTouches.length > 0) {
+                const touch = e.changedTouches[0];
+                const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
+                const portEl = targetEl ? targetEl.closest('.port[data-port="in"]') : null;
+                if (portEl) {
+                    const targetNodeId = portEl.getAttribute('data-node');
+                    finishConnection(e, targetNodeId);
+                } else {
+                    cancelConnection();
+                }
             }
         });
 
@@ -1714,10 +1897,10 @@ print(mcd_iterativo(105, 70))  # 35</textarea>
             const statusEl = document.getElementById('compile-status');
             if (errors.length > 0) {
                 statusEl.className = 'px-3 py-2 bg-amber-950/40 border-b border-amber-500/30 text-[11px] text-amber-300 flex items-center gap-2';
-                statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span><span>${errors[0]}</span>`;
+                statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span><span class="truncate">${errors[0]}</span>`;
             } else {
                 statusEl.className = 'px-3 py-2 bg-emerald-950/30 border-b border-emerald-500/20 text-[11px] text-emerald-300 flex items-center gap-2';
-                statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0"></span><span>Compilado con éxito (${assembledRows.length} instrucciones)</span>`;
+                statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0"></span><span class="truncate">Compilado con éxito (${assembledRows.length} instrucciones)</span>`;
             }
 
             const asmEl = document.getElementById('asm-output');
@@ -1772,7 +1955,6 @@ print(mcd_iterativo(105, 70))  # 35</textarea>
 
         // =========================================================================
         // COMPILADOR PYTHON -> AUTO-GRAFICADO DE NODOS -> ENSAMBLADOR & LOGISIM
-        // Soporta: def (con o sin llamada externa), while, tuplas, %, abs, max, min
         // =========================================================================
         const PYTHON_PRESETS = {
             'mcd': `def mcd_iterativo(a: int, b: int) -> int:\n    a, b = abs(a), abs(b)\n    while b != 0:\n        a, b = b, a % b\n    return a\n\n\nprint(mcd_iterativo(105, 70))  # 35`,
@@ -1804,6 +1986,10 @@ print(mcd_iterativo(105, 70))  # 35</textarea>
                 return;
             }
 
+            if (isMobileViewport() && activeMobileView !== 'canvas') {
+                setMobileView('canvas');
+            }
+
             clearCanvas();
             let functions = {};     // fnName -> { params: [...], body: [...] }
             let functionOrder = []; // Orden de definición
@@ -1814,7 +2000,7 @@ print(mcd_iterativo(105, 70))  # 35</textarea>
             let hasPrint = false;
 
             function addLayoutNode(type, col, props = {}) {
-                const x = 35 + col * 245;
+                const x = 35 + col * 225;
                 const y = colY[col] || 40;
                 colY[col] = y + (type === 'CONST' ? 145 : 105);
                 return createNode(type, x, y, props);
@@ -2164,6 +2350,9 @@ print(mcd_iterativo(105, 70))  # 35</textarea>
         }
 
         function loadExampleMax5() {
+            if (isMobileViewport() && activeMobileView !== 'canvas') {
+                setMobileView('canvas');
+            }
             clearCanvas();
             const in1 = createNode('INPUT', 30, 20,  { count: 1 });
             const in2 = createNode('INPUT', 30, 115, { count: 1 });
@@ -2194,6 +2383,9 @@ print(mcd_iterativo(105, 70))  # 35</textarea>
         }
 
         function loadExampleSum2() {
+            if (isMobileViewport() && activeMobileView !== 'canvas') {
+                setMobileView('canvas');
+            }
             clearCanvas();
             const in1 = createNode('INPUT', 40, 80, { count: 1 });
             const c1  = createNode('CONST', 40, 230, { name: 'DIEZ', ramAddr: 31, value: 10 });
@@ -2259,9 +2451,13 @@ print(mcd_iterativo(105, 70))  # 35</textarea>
         }
 
         window.onload = () => {
+            setMobileView('canvas');
             loadExampleMax5();
         };
-        window.addEventListener('resize', renderWires);
+        window.addEventListener('resize', () => {
+            setMobileView(activeMobileView);
+            renderWires();
+        });
     </script>
 </body>
 </html>
