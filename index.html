@@ -1,1 +1,2267 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR-2 Visual Studio | Editor de Bloques para Microprocesador AR-2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0b0f19;
+            color: #e2e8f0;
+            overflow: hidden;
+            user-select: none;
+        }
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        /* Cuadrícula estilo Unreal Blueprints / Node-RED */
+        .canvas-grid {
+            background-color: #0f1422;
+            background-image: 
+                linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+                linear-gradient(to right, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+            background-size: 20px 20px, 20px 20px, 100px 100px, 100px 100px;
+        }
+        /* Nodos arrastrables */
+        .node-card {
+            position: absolute;
+            min-width: 210px;
+            border-radius: 10px;
+            background: rgba(23, 30, 48, 0.95);
+            backdrop-filter: blur(8px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.1);
+            transition: box-shadow 0.15s ease;
+            z-index: 10;
+        }
+        .node-card:hover {
+            box-shadow: 0 14px 30px -5px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.25);
+        }
+        .node-card.selected {
+            box-shadow: 0 0 0 2px #38bdf8, 0 14px 30px -5px rgba(0, 0, 0, 0.8);
+            z-index: 20;
+        }
+        /* Puertos de conexión */
+        .port {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid #0f1422;
+            cursor: crosshair;
+            transition: transform 0.15s ease, background-color 0.15s ease;
+            z-index: 30;
+        }
+        .port:hover {
+            transform: scale(1.35);
+            box-shadow: 0 0 8px currentColor;
+        }
+        /* Cables SVG */
+        svg#wires-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+        .wire-path {
+            fill: none;
+            stroke-width: 3;
+            stroke-linecap: round;
+            pointer-events: stroke;
+            cursor: pointer;
+            transition: stroke-width 0.15s ease;
+        }
+        .wire-path:hover {
+            stroke-width: 5;
+            filter: drop-shadow(0 0 6px rgba(248, 113, 113, 0.8));
+            stroke: #f87171 !important;
+        }
+        textarea.selectable {
+            user-select: text;
+        }
+        /* Scrollbars personalizados */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0b0f19;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
 
+        /* =========================================================
+           TEMA CLARO (ACTIVADO MEDIANTE BOTÓN SUPERIOR)
+           ========================================================= */
+        body.light-mode {
+            background-color: #f1f5f9;
+            color: #0f172a;
+        }
+        body.light-mode header,
+        body.light-mode aside,
+        body.light-mode aside > div.bg-slate-900 {
+            background-color: rgba(255, 255, 255, 0.96) !important;
+            border-color: #cbd5e1 !important;
+        }
+        body.light-mode .canvas-grid {
+            background-color: #f8fafc !important;
+            background-image: 
+                linear-gradient(to right, rgba(15, 23, 42, 0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(15, 23, 42, 0.05) 1px, transparent 1px),
+                linear-gradient(to right, rgba(15, 23, 42, 0.1) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(15, 23, 42, 0.1) 1px, transparent 1px) !important;
+        }
+        body.light-mode .node-card {
+            background: rgba(255, 255, 255, 0.96) !important;
+            box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(15, 23, 42, 0.14) !important;
+            color: #0f172a !important;
+        }
+        body.light-mode .node-card:hover {
+            box-shadow: 0 14px 30px -5px rgba(15, 23, 42, 0.18), 0 0 0 1px rgba(15, 23, 42, 0.28) !important;
+        }
+        body.light-mode .node-card.selected {
+            box-shadow: 0 0 0 2px #0284c7, 0 14px 30px -5px rgba(15, 23, 42, 0.2) !important;
+        }
+        body.light-mode .port {
+            border-color: #ffffff !important;
+        }
+        body.light-mode .text-white {
+            color: #0f172a !important;
+        }
+        body.light-mode .bg-gradient-to-br.text-white,
+        body.light-mode .bg-gradient-to-r.text-white,
+        body.light-mode .bg-cyan-600.text-white,
+        body.light-mode #toast {
+            color: #ffffff !important;
+        }
+        body.light-mode .text-slate-200,
+        body.light-mode .text-slate-300 {
+            color: #1e293b !important;
+        }
+        body.light-mode .text-slate-400 {
+            color: #475569 !important;
+        }
+        body.light-mode .text-slate-500 {
+            color: #64748b !important;
+        }
+        body.light-mode .bg-slate-950,
+        body.light-mode .bg-slate-950\/60,
+        body.light-mode .bg-slate-900 {
+            background-color: #f1f5f9 !important;
+        }
+        body.light-mode .bg-slate-800,
+        body.light-mode .bg-slate-800\/40,
+        body.light-mode .bg-slate-800\/50 {
+            background-color: #e2e8f0 !important;
+        }
+        body.light-mode .hover\:bg-slate-700:hover,
+        body.light-mode .hover\:bg-slate-900\/80:hover {
+            background-color: #cbd5e1 !important;
+        }
+        body.light-mode .border-slate-800,
+        body.light-mode .border-slate-700,
+        body.light-mode .border-slate-600 {
+            border-color: #cbd5e1 !important;
+        }
+        body.light-mode .divide-slate-800\/60 > :not([hidden]) ~ :not([hidden]) {
+            border-color: #cbd5e1 !important;
+        }
+        body.light-mode .bg-black\/30 {
+            background-color: rgba(255, 255, 255, 0.7) !important;
+            color: #0f172a !important;
+        }
+        /* Ajustes de contraste por color en modo claro */
+        body.light-mode .text-blue-300, body.light-mode .text-blue-400 { color: #1d4ed8 !important; }
+        body.light-mode .text-purple-300, body.light-mode .text-purple-400 { color: #7e22ce !important; }
+        body.light-mode .text-amber-200, body.light-mode .text-amber-300, body.light-mode .text-amber-400 { color: #b45309 !important; }
+        body.light-mode .text-orange-300, body.light-mode .text-orange-400 { color: #c2410c !important; }
+        body.light-mode .text-yellow-300, body.light-mode .text-yellow-400 { color: #a16207 !important; }
+        body.light-mode .text-cyan-300, body.light-mode .text-cyan-400 { color: #0e7490 !important; }
+        body.light-mode .text-teal-300 { color: #0f766e !important; }
+        body.light-mode .text-indigo-300 { color: #4338ca !important; }
+        body.light-mode .text-fuchsia-300 { color: #a21caf !important; }
+        body.light-mode .text-emerald-300, body.light-mode .text-emerald-400 { color: #047857 !important; }
+        body.light-mode .text-sky-300, body.light-mode .text-sky-400 { color: #0369a1 !important; }
+        body.light-mode .text-rose-400 { color: #be123c !important; }
+
+        body.light-mode .bg-blue-950\/40, body.light-mode .bg-blue-600\/30 { background-color: #dbeafe !important; }
+        body.light-mode .bg-purple-950\/40, body.light-mode .bg-purple-600\/30 { background-color: #f3e8ff !important; }
+        body.light-mode .bg-amber-950\/40, body.light-mode .bg-amber-600\/30, body.light-mode .bg-amber-500\/15 { background-color: #fef3c7 !important; }
+        body.light-mode .bg-orange-950\/40, body.light-mode .bg-orange-600\/30 { background-color: #ffedd5 !important; }
+        body.light-mode .bg-yellow-950\/40, body.light-mode .bg-yellow-600\/30 { background-color: #fef9c3 !important; }
+        body.light-mode .bg-cyan-950\/50, body.light-mode .bg-cyan-950\/35, body.light-mode .bg-cyan-600\/30 { background-color: #cffafe !important; }
+        body.light-mode .bg-sky-600\/30 { background-color: #e0f2fe !important; }
+        body.light-mode .bg-teal-600\/30 { background-color: #ccfbf1 !important; }
+        body.light-mode .bg-indigo-600\/30 { background-color: #e0e7ff !important; }
+        body.light-mode .bg-fuchsia-600\/30 { background-color: #fae8ff !important; }
+        body.light-mode .bg-emerald-950\/40, body.light-mode .bg-emerald-950\/30, body.light-mode .bg-emerald-600\/30 { background-color: #d1fae5 !important; }
+        body.light-mode .bg-rose-500\/10 { background-color: #ffe4e6 !important; }
+
+        body.light-mode::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        body.light-mode::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col">
+
+    <!-- Barra Superior -->
+    <header class="h-14 bg-slate-900/95 border-b border-slate-800 px-4 flex items-center justify-between shrink-0 z-30">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/20">
+                AR2
+            </div>
+            <div>
+                <h1 class="font-bold text-sm sm:text-base text-white tracking-tight flex items-center gap-2">
+                    AR-2 Visual Studio
+                    <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">RAM 32B • 5-Bit</span>
+                </h1>
+                <p class="text-[11px] text-slate-400 hidden sm:block">Programación Visual por Nodos para Microprocesador AR-2</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <button onclick="loadExampleMax5()" class="px-3 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-medium transition flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                <span>Ejemplo: Mayor de 5 Números</span>
+            </button>
+            <button onclick="loadExampleSum2()" class="hidden md:flex px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-medium transition items-center gap-1.5">
+                <span>Ejemplo: Suma + Constante</span>
+            </button>
+            <button onclick="clearCanvas()" class="px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-xs font-medium transition">
+                Limpiar Pizarra
+            </button>
+            <button id="theme-toggle-btn" onclick="toggleTheme()" title="Cambiar entre modo oscuro y claro"
+                    class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium transition flex items-center gap-1.5 cursor-pointer">
+                <span id="theme-icon">☀️</span>
+                <span id="theme-label" class="hidden sm:inline">Modo Claro</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Cuerpo Principal (3 Columnas) -->
+    <div class="flex-1 flex overflow-hidden">
+        
+        <!-- Panel Izquierdo: Paleta de Cajas Arrastrables -->
+        <aside class="w-60 bg-slate-900/90 border-r border-slate-800 flex flex-col shrink-0 z-20">
+            <div class="p-3 border-b border-slate-800">
+                <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Bloques Disponibles</h2>
+                <p class="text-[11px] text-slate-500 mt-0.5">Arrastra a la pizarra o haz clic</p>
+            </div>
+            
+            <div class="p-3 space-y-2.5 overflow-y-auto flex-1">
+                <!-- Caja Entrada -->
+                <div draggable="true" ondragstart="onPaletteDragStart(event, 'INPUT')" onclick="spawnNodeAtCenter('INPUT')"
+                     class="p-3 rounded-xl bg-blue-950/40 hover:bg-blue-900/40 border border-blue-500/30 cursor-grab active:cursor-grabbing transition group">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-blue-300 flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-blue-400"></span>
+                            Entrada (INPUT)
+                        </span>
+                        <span class="text-[10px] font-mono text-blue-400/70">0x80</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 mt-1">Lee datos desde el puerto Input del AR-2.</p>
+                </div>
+
+                <!-- Caja Constante -->
+                <div draggable="true" ondragstart="onPaletteDragStart(event, 'CONST')" onclick="spawnNodeAtCenter('CONST')"
+                     class="p-3 rounded-xl bg-purple-950/40 hover:bg-purple-900/40 border border-purple-500/30 cursor-grab active:cursor-grabbing transition group">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-purple-300 flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-purple-400"></span>
+                            Constante / RAM
+                        </span>
+                        <span class="text-[10px] font-mono text-purple-400/70">M[addr]</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 mt-1">Valor fijo almacenado en dirección RAM (0-31).</p>
+                </div>
+
+                <div class="pt-1 pb-0.5 flex items-center justify-between">
+                    <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Operaciones ALU</span>
+                </div>
+
+                <!-- Caja Sumar -->
+                <div draggable="true" ondragstart="onPaletteDragStart(event, 'ADD')" onclick="spawnNodeAtCenter('ADD')"
+                     class="p-3 rounded-xl bg-amber-950/40 hover:bg-amber-900/40 border border-amber-500/30 cursor-grab active:cursor-grabbing transition group">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-amber-300 flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+                            Operación: Sumar
+                        </span>
+                        <span class="text-[10px] font-mono text-amber-400/70">ADD</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 mt-1">Suma todas las entradas conectadas al bloque.</p>
+                </div>
+
+                <!-- Caja Restar -->
+                <div draggable="true" ondragstart="onPaletteDragStart(event, 'SUB')" onclick="spawnNodeAtCenter('SUB')"
+                     class="p-3 rounded-xl bg-orange-950/40 hover:bg-orange-900/40 border border-orange-500/30 cursor-grab active:cursor-grabbing transition group">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-orange-300 flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-orange-400"></span>
+                            Operación: Restar
+                        </span>
+                        <span class="text-[10px] font-mono text-orange-400/70">SUB</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 mt-1">Resta las entradas siguientes a la primera.</p>
+                </div>
+
+                <!-- Caja Mayor (MAX) -->
+                <div draggable="true" ondragstart="onPaletteDragStart(event, 'MAX')" onclick="spawnNodeAtCenter('MAX')"
+                     class="p-3 rounded-xl bg-yellow-950/40 hover:bg-yellow-900/40 border border-yellow-500/30 cursor-grab active:cursor-grabbing transition group">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-yellow-300 flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-yellow-400"></span>
+                            Operación: Mayor
+                        </span>
+                        <span class="text-[10px] font-mono text-yellow-400/70">MAX</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 mt-1">Calcula el mayor usando SUB y saltos JPOS.</p>
+                </div>
+
+                <!-- Contenedor de Operaciones Personalizadas AR-2 -->
+                <div id="custom-ops-palette" class="space-y-2.5"></div>
+
+                <!-- BOTÓN ADICIONAL PARA AGREGAR NUEVAS OPERACIONES SEGÚN EL MICROPROCESADOR AR-2 -->
+                <button onclick="openNewOpModal()"
+                        class="w-full py-2 px-3 rounded-xl bg-cyan-950/50 hover:bg-cyan-900/60 border border-dashed border-cyan-500/50 text-cyan-300 text-xs font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm">
+                    <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    <span>Nueva Operación AR-2</span>
+                </button>
+
+                <div class="pt-1 pb-0.5">
+                    <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Finalización</span>
+                </div>
+
+                <!-- Caja Salida / HALT -->
+                <div draggable="true" ondragstart="onPaletteDragStart(event, 'HALT')" onclick="spawnNodeAtCenter('HALT')"
+                     class="p-3 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/40 border border-emerald-500/30 cursor-grab active:cursor-grabbing transition group">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-emerald-300 flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+                            Salida / HALT
+                        </span>
+                        <span class="text-[10px] font-mono text-emerald-400/70">0xE0</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 mt-1">Carga resultado en A (Output) y detiene CPU.</p>
+                </div>
+            </div>
+
+            <!-- Ayuda rápida -->
+            <div class="p-3 bg-slate-950/60 border-t border-slate-800 text-[11px] text-slate-400 space-y-1">
+                <div class="font-semibold text-slate-300">Controles:</div>
+                <div>• Arrastra desde puerto <span class="text-sky-400">●</span> derecho a <span class="text-amber-400">●</span> izquierdo para unir.</div>
+                <div>• Clic sobre un cable para eliminarlo.</div>
+            </div>
+        </aside>
+
+        <!-- Lienzo Central: Pizarra de Nodos -->
+        <main id="workspace" class="flex-1 relative canvas-grid overflow-hidden"
+              ondragover="event.preventDefault()" ondrop="onCanvasDrop(event)">
+            
+            <!-- Capa SVG para cables -->
+            <svg id="wires-layer">
+                <defs>
+                    <linearGradient id="wireGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#38bdf8" />
+                        <stop offset="100%" stop-color="#fbbf24" />
+                    </linearGradient>
+                </defs>
+                <g id="connections-group"></g>
+                <path id="temp-wire" class="wire-path" stroke="#38bdf8" stroke-dasharray="6,4" d="" style="display:none; pointer-events:none;"></path>
+            </svg>
+
+            <!-- Contenedor de Nodos -->
+            <div id="nodes-container" class="w-full h-full relative"></div>
+
+            <!-- Mensaje flotante / Toast -->
+            <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-slate-800 border border-slate-600 text-xs text-white shadow-xl opacity-0 pointer-events-none transition-opacity duration-300 z-50">
+                Mensaje
+            </div>
+        </main>
+
+        <!-- Panel Derecho: Compilador, Ensamblador y Exportación Logisim -->
+        <aside class="w-80 sm:w-96 bg-slate-900/95 border-l border-slate-800 flex flex-col shrink-0 z-20">
+            <div class="p-3 border-b border-slate-800 flex items-center justify-between">
+                <div>
+                    <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-300">Compilador AR-2</h2>
+                    <p class="text-[11px] text-slate-500">Traducción en tiempo real a Logisim</p>
+                </div>
+                <span id="ram-usage-badge" class="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-800 text-emerald-400 border border-slate-700">
+                    0 / 32 Bytes
+                </span>
+            </div>
+
+            <!-- Estado / Alertas de compilación -->
+            <div id="compile-status" class="px-3 py-2 bg-emerald-950/30 border-b border-emerald-500/20 text-[11px] text-emerald-300 flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>Listo para compilar</span>
+            </div>
+
+            <!-- Pestañas de Vista (Incluye nueva pestaña Python) -->
+            <div class="flex border-b border-slate-800 text-[11px] font-medium">
+                <button id="tab-btn-hex" onclick="switchTab('hex')" class="flex-1 py-2 px-1 text-center border-b-2 border-blue-500 text-blue-400 bg-slate-800/40 truncate">
+                    Logisim (.hex)
+                </button>
+                <button id="tab-btn-asm" onclick="switchTab('asm')" class="flex-1 py-2 px-1 text-center border-b-2 border-transparent text-slate-400 hover:text-slate-200 truncate">
+                    Ensamblador
+                </button>
+                <button id="tab-btn-ram" onclick="switchTab('ram')" class="flex-1 py-2 px-1 text-center border-b-2 border-transparent text-slate-400 hover:text-slate-200 truncate">
+                    Mapa RAM
+                </button>
+                <button id="tab-btn-py" onclick="switchTab('py')" class="flex-1 py-2 px-1 text-center border-b-2 border-transparent text-slate-400 hover:text-slate-200 truncate flex items-center justify-center gap-1">
+                    <span class="text-amber-400">🐍</span> Python
+                </button>
+            </div>
+
+            <!-- Contenido de Pestañas -->
+            <div class="flex-1 overflow-y-auto p-3 space-y-3">
+                
+                <!-- Tab 1: Salida HEX Logisim -->
+                <div id="tab-hex" class="space-y-3">
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-[11px] font-semibold text-slate-400">Contenido archivo memoria_ar2.hex:</span>
+                            <button onclick="copyHexToClipboard()" class="text-[11px] text-sky-400 hover:text-sky-300 underline">Copiar texto</button>
+                        </div>
+                        <pre id="hex-output" class="p-3 rounded-xl bg-slate-950 border border-slate-800 font-mono text-xs text-emerald-400 overflow-x-auto leading-relaxed">v3.0 hex words addressed
+00: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+10: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00</pre>
+                    </div>
+
+                    <div class="p-3 rounded-xl bg-slate-800/40 border border-slate-800 text-[11px] text-slate-400 space-y-1.5">
+                        <div class="font-semibold text-slate-200">¿Cómo cargar en Logisim?</div>
+                        <p>1. Haz clic en el botón verde inferior para descargar <code class="text-emerald-300">memoria_ar2.hex</code>.</p>
+                        <p>2. En Logisim, haz clic derecho sobre el componente <b>RAM</b> del Datapath y selecciona <b>Load Image...</b></p>
+                        <p>3. Selecciona el archivo descargado y activa el reloj.</p>
+                    </div>
+                </div>
+
+                <!-- Tab 2: Código Ensamblador Generado -->
+                <div id="tab-asm" class="hidden space-y-2">
+                    <div class="text-[11px] font-semibold text-slate-400">Instrucciones generadas (PC 00 - 31):</div>
+                    <div id="asm-output" class="rounded-xl bg-slate-950 border border-slate-800 font-mono text-[11px] divide-y divide-slate-800/60 overflow-hidden">
+                        <!-- Filas generadas dinámicamente -->
+                    </div>
+                </div>
+
+                <!-- Tab 3: Mapa Visual de las 32 celdas RAM -->
+                <div id="tab-ram" class="hidden space-y-2">
+                    <div class="text-[11px] font-semibold text-slate-400">Distribución de Memoria RAM (32 x 8 bits):</div>
+                    <div id="ram-grid" class="grid grid-cols-4 gap-1.5 font-mono text-[10px]">
+                        <!-- 32 celdas generadas dinámicamente -->
+                    </div>
+                </div>
+
+                <!-- Tab 4: Código Python -> Auto-Graficado + Ensamblador + Logisim -->
+                <div id="tab-py" class="hidden space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[11px] font-semibold text-amber-300">Código Python para AR-2:</span>
+                        <select id="py-presets" onchange="loadPythonPreset(this.value)" class="bg-slate-800 border border-slate-700 text-[10px] text-slate-200 rounded px-2 py-1 focus:outline-none">
+                            <option value="mcd">MCD Iterativo (Euclides)</option>
+                            <option value="max3">Mayor de 3 entradas</option>
+                            <option value="mul">Multiplicación (a * b)</option>
+                            <option value="div">División entera (a // b)</option>
+                            <option value="expr">Suma y resta con constante</option>
+                        </select>
+                    </div>
+
+                    <textarea id="python-code-input" rows="10" spellcheck="false"
+                              placeholder="# Escribe código Python compatible con AR-2..."
+                              class="selectable w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 focus:border-amber-500 focus:outline-none font-mono text-xs text-amber-200 leading-relaxed resize-y">def mcd_iterativo(a: int, b: int) -> int:
+    a, b = abs(a), abs(b)
+    while b != 0:
+        a, b = b, a % b
+    return a
+
+
+print(mcd_iterativo(105, 70))  # 35</textarea>
+
+                    <button type="button" onclick="compilePythonToAR2()"
+                            class="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-semibold text-xs shadow-lg shadow-amber-900/30 transition flex items-center justify-center gap-2 cursor-pointer">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <span>Graficar Bloques y Generar AR-2</span>
+                    </button>
+
+                    <div id="py-feedback" class="p-2.5 rounded-xl bg-slate-800/50 border border-slate-800 text-[10px] text-slate-400 space-y-1">
+                        <div class="font-semibold text-slate-300">Sintaxis Python soportada en hardware AR-2:</div>
+                        <div>• Funciones y bucles: <code class="text-cyan-300">def f(a, b):</code>, <code class="text-cyan-300">while b != 0:</code>, <code class="text-cyan-300">return</code></div>
+                        <div>• Asignaciones y tuplas: <code class="text-purple-300">a, b = b, a % b</code>, <code class="text-blue-300">int(input())</code></div>
+                        <div>• Operadores: <code class="text-amber-300">+</code>, <code class="text-orange-300">-</code>, <code class="text-cyan-300">*</code>, <code class="text-cyan-300">//</code>, <code class="text-cyan-300">%</code>, <code class="text-yellow-300">max()</code>, <code class="text-cyan-300">min()</code>, <code class="text-cyan-300">abs()</code></div>
+                        <div>• Salida: <code class="text-emerald-300">print(res)</code> (o solo <code class="text-cyan-300">def ...</code> usando entradas INPUT)</div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Botón Principal de Descarga -->
+            <div class="p-3 border-t border-slate-800 bg-slate-900">
+                <button onclick="downloadHexFile()" class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold text-xs sm:text-sm shadow-lg shadow-emerald-900/40 transition flex items-center justify-center gap-2 cursor-pointer">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    <span>Descargar memoria_ar2.hex</span>
+                </button>
+            </div>
+        </aside>
+    </div>
+
+    <!-- MODAL PARA AGREGAR NUEVA OPERACIÓN SEGÚN ARQUITECTURA AR-2 -->
+    <div id="new-op-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div>
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
+                        Nueva Operación para Microprocesador AR-2
+                    </h3>
+                    <p class="text-[11px] text-slate-400 mt-0.5">Sintetizada con instrucciones nativas (ADD, SUB, JZ, JPOS)</p>
+                </div>
+                <button onclick="closeNewOpModal()" class="text-slate-400 hover:text-white">✕</button>
+            </div>
+
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-slate-300 font-medium mb-1">Tipo de Operación AR-2:</label>
+                    <select id="new-op-preset" onchange="onNewOpPresetChange()" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-cyan-300 focus:outline-none focus:border-cyan-500">
+                        <option value="MCD">Máximo Común Divisor (MCD) — Algoritmo de Euclides</option>
+                        <option value="MOD">Módulo / Residuo (MOD) — Restas sucesivas (a % b)</option>
+                        <option value="MUL">Multiplicación (MUL) — Sumas sucesivas con JZ/JPOS</option>
+                        <option value="DIV">División Entera (DIV) — Restas sucesivas con JPOS</option>
+                        <option value="MIN">Mínimo (MIN) — Comparación con SUB y salto JPOS</option>
+                        <option value="ABS">Valor Absoluto (ABS) — Signo con flag Apos</option>
+                        <option value="DBL">Multiplicar por 2 (x2) — ADD A, A</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-slate-400 mb-1">Nombre del Bloque:</label>
+                        <input id="new-op-title" type="text" value="Operación: MCD" class="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-white focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-1">Etiqueta (Badge):</label>
+                        <input id="new-op-badge" type="text" value="MCD" maxlength="5" class="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 font-mono text-cyan-300 uppercase focus:outline-none">
+                    </div>
+                </div>
+
+                <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+                    <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Micro-algoritmo en Datapath AR-2:</div>
+                    <p id="new-op-desc" class="text-[11px] text-slate-300 leading-relaxed">
+                        Calcula MCD(a, b) aplicando valor absoluto con Apos y el bucle de Euclides (a, b = b, a % b) mediante SUB, JZ y JPOS.
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                <button onclick="closeNewOpModal()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs">Cancelar</button>
+                <button onclick="confirmAddCustomOperation()" class="px-4 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs shadow-lg shadow-cyan-900/40">
+                    Agregar a Paleta y Crear
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================================
+        // CAMBIO ENTRE MODO OSCURO Y MODO CLARO
+        // =========================================================================
+        function toggleTheme() {
+            const isLight = document.body.classList.toggle('light-mode');
+            const iconEl = document.getElementById('theme-icon');
+            const labelEl = document.getElementById('theme-label');
+            if (isLight) {
+                iconEl.innerText = '🌙';
+                labelEl.innerText = 'Modo Oscuro';
+            } else {
+                iconEl.innerText = '☀️';
+                labelEl.innerText = 'Modo Claro';
+            }
+        }
+
+        // =========================================================================
+        // ESTADO GLOBAL DEL ESTUDIO VISUAL AR-2
+        // =========================================================================
+        let nodes = [];
+        let connections = []; // { id, fromNode, toNode }
+        let nextNodeId = 1;
+        let selectedNodeId = null;
+
+        // Estado para arrastrar nodos en el lienzo
+        let draggingNode = null;
+        let dragOffset = { x: 0, y: 0 };
+
+        // Estado para dibujar cables entre puertos
+        let connectingFromNodeId = null;
+
+        // Conjunto de instrucciones nativas del microprocesador AR-2 (verificado en circuito Logisim)
+        const OPCODES = {
+            'LOAD':  '000',
+            'STORE': '001',
+            'ADD':   '010',
+            'SUB':   '011',
+            'INPUT': '100',
+            'JZ':    '101',
+            'JPOS':  '110',
+            'HALT':  '111'
+        };
+
+        // Configuración visual por tipo de nodo (extensible con operaciones nuevas)
+        const NODE_CONFIG = {
+            'INPUT': {
+                title: 'Entrada (INPUT)',
+                badge: '0x80',
+                headerBg: 'bg-blue-600/30 border-b border-blue-500/30 text-blue-300',
+                portColor: '#38bdf8',
+                hasIn: false,
+                hasOut: true
+            },
+            'CONST': {
+                title: 'Constante / RAM',
+                badge: 'MEM',
+                headerBg: 'bg-purple-600/30 border-b border-purple-500/30 text-purple-300',
+                portColor: '#c084fc',
+                hasIn: false,
+                hasOut: true
+            },
+            'ADD': {
+                title: 'Operación: Sumar',
+                badge: 'ADD',
+                headerBg: 'bg-amber-600/30 border-b border-amber-500/30 text-amber-300',
+                portColor: '#fbbf24',
+                hasIn: true,
+                hasOut: true
+            },
+            'SUB': {
+                title: 'Operación: Restar',
+                badge: 'SUB',
+                headerBg: 'bg-orange-600/30 border-b border-orange-500/30 text-orange-300',
+                portColor: '#fb923c',
+                hasIn: true,
+                hasOut: true
+            },
+            'MAX': {
+                title: 'Operación: Mayor',
+                badge: 'MAX',
+                headerBg: 'bg-yellow-600/30 border-b border-yellow-500/30 text-yellow-300',
+                portColor: '#facc15',
+                hasIn: true,
+                hasOut: true
+            },
+            'MCD': {
+                title: 'Operación: MCD',
+                badge: 'MCD',
+                headerBg: 'bg-cyan-600/30 border-b border-cyan-500/30 text-cyan-300',
+                portColor: '#22d3ee',
+                hasIn: true,
+                hasOut: true,
+                isCustomOp: true
+            },
+            'MOD': {
+                title: 'Operación: Módulo (%)',
+                badge: 'MOD',
+                headerBg: 'bg-sky-600/30 border-b border-sky-500/30 text-sky-300',
+                portColor: '#38bdf8',
+                hasIn: true,
+                hasOut: true,
+                isCustomOp: true
+            },
+            'MUL': {
+                title: 'Operación: Multiplicar',
+                badge: 'MUL',
+                headerBg: 'bg-cyan-600/30 border-b border-cyan-500/30 text-cyan-300',
+                portColor: '#22d3ee',
+                hasIn: true,
+                hasOut: true,
+                isCustomOp: true
+            },
+            'DIV': {
+                title: 'Operación: Dividir',
+                badge: 'DIV',
+                headerBg: 'bg-teal-600/30 border-b border-teal-500/30 text-teal-300',
+                portColor: '#2dd4bf',
+                hasIn: true,
+                hasOut: true,
+                isCustomOp: true
+            },
+            'MIN': {
+                title: 'Operación: Menor',
+                badge: 'MIN',
+                headerBg: 'bg-indigo-600/30 border-b border-indigo-500/30 text-indigo-300',
+                portColor: '#818cf8',
+                hasIn: true,
+                hasOut: true,
+                isCustomOp: true
+            },
+            'ABS': {
+                title: 'Valor Absoluto',
+                badge: 'ABS',
+                headerBg: 'bg-fuchsia-600/30 border-b border-fuchsia-500/30 text-fuchsia-300',
+                portColor: '#e879f9',
+                hasIn: true,
+                hasOut: true,
+                isCustomOp: true
+            },
+            'DBL': {
+                title: 'Duplicar (x2)',
+                badge: 'x2',
+                headerBg: 'bg-sky-600/30 border-b border-sky-500/30 text-sky-300',
+                portColor: '#38bdf8',
+                hasIn: true,
+                hasOut: true,
+                isCustomOp: true
+            },
+            'HALT': {
+                title: 'Salida / Fin (HALT)',
+                badge: '0xE0',
+                headerBg: 'bg-emerald-600/30 border-b border-emerald-500/30 text-emerald-300',
+                portColor: '#34d399',
+                hasIn: true,
+                hasOut: false
+            }
+        };
+
+        let addedCustomTypes = new Set();
+
+        // =========================================================================
+        // MODAL Y CREACIÓN DE NUEVAS OPERACIONES AR-2
+        // =========================================================================
+        const OP_PRESET_DETAILS = {
+            'MCD': {
+                title: 'Operación: MCD',
+                badge: 'MCD',
+                desc: 'Calcula MCD(a, b) aplicando valor absoluto con Apos y el bucle de Euclides (a, b = b, a % b) mediante SUB, JZ y JPOS.'
+            },
+            'MOD': {
+                title: 'Operación: Módulo (%)',
+                badge: 'MOD',
+                desc: 'Calcula el residuo a % b restando sucesivamente el divisor mediante SUB y saltos JPOS.'
+            },
+            'MUL': {
+                title: 'Operación: Multiplicar',
+                badge: 'MUL',
+                desc: 'Multiplica Entrada 1 × Entrada 2 mediante sumas repetidas usando ADD, SUB, JZ y JPOS en la ALU del AR-2.'
+            },
+            'DIV': {
+                title: 'Operación: Dividir',
+                badge: 'DIV',
+                desc: 'Calcula el cociente entero Entrada 1 // Entrada 2 mediante restas sucesivas controladas por el flag Apos (JPOS).'
+            },
+            'MIN': {
+                title: 'Operación: Menor',
+                badge: 'MIN',
+                desc: 'Obtiene el menor valor conectado comparando diferencias con SUB y saltos condicionales JPOS.'
+            },
+            'ABS': {
+                title: 'Valor Absoluto',
+                badge: 'ABS',
+                desc: 'Evalúa el bit de signo (Apos). Si el número en complemento a 2 es negativo, calcula 0 − A.'
+            },
+            'DBL': {
+                title: 'Duplicar (x2)',
+                badge: 'x2',
+                desc: 'Duplica el valor de entrada ejecutando LOAD A, X seguido de ADD A, X (desplazamiento izquierdo).'
+            }
+        };
+
+        function openNewOpModal() {
+            const modal = document.getElementById('new-op-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            onNewOpPresetChange();
+        }
+
+        function closeNewOpModal() {
+            const modal = document.getElementById('new-op-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function onNewOpPresetChange() {
+            const preset = document.getElementById('new-op-preset').value;
+            const info = OP_PRESET_DETAILS[preset];
+            document.getElementById('new-op-title').value = info.title;
+            document.getElementById('new-op-badge').value = info.badge;
+            document.getElementById('new-op-desc').innerText = info.desc;
+        }
+
+        function registerCustomOpInPalette(opType, customTitle = null, customBadge = null) {
+            if (!NODE_CONFIG[opType]) return;
+            if (customTitle) NODE_CONFIG[opType].title = customTitle;
+            if (customBadge) NODE_CONFIG[opType].badge = customBadge.toUpperCase();
+
+            if (addedCustomTypes.has(opType)) return;
+            addedCustomTypes.add(opType);
+
+            const cfg = NODE_CONFIG[opType];
+            const palette = document.getElementById('custom-ops-palette');
+            const card = document.createElement('div');
+            card.setAttribute('draggable', 'true');
+            card.ondragstart = (e) => onPaletteDragStart(e, opType);
+            card.onclick = () => spawnNodeAtCenter(opType);
+            card.className = 'p-3 rounded-xl bg-cyan-950/35 hover:bg-cyan-900/40 border border-cyan-500/30 cursor-grab active:cursor-grabbing transition group';
+            card.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-cyan-300 flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
+                        ${cfg.title}
+                    </span>
+                    <span class="text-[10px] font-mono text-cyan-400/80">${cfg.badge}</span>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-1">Operación sintetizada AR-2 (${cfg.badge}).</p>
+            `;
+            palette.appendChild(card);
+        }
+
+        function confirmAddCustomOperation() {
+            const opType = document.getElementById('new-op-preset').value;
+            const title = document.getElementById('new-op-title').value.trim() || OP_PRESET_DETAILS[opType].title;
+            const badge = document.getElementById('new-op-badge').value.trim() || OP_PRESET_DETAILS[opType].badge;
+
+            registerCustomOpInPalette(opType, title, badge);
+            spawnNodeAtCenter(opType);
+            closeNewOpModal();
+            showToast(`Operación "${title}" agregada a la paleta y pizarra`);
+        }
+
+        // =========================================================================
+        // GESTIÓN DE NODOS EN LA PIZARRA
+        // =========================================================================
+        function getNextAvailableRamAddress() {
+            const used = new Set(nodes.filter(n => n.type === 'CONST').map(n => parseInt(n.ramAddr)));
+            for (let addr = 31; addr >= 20; addr--) {
+                if (!used.has(addr)) return addr;
+            }
+            return 31;
+        }
+
+        function createNode(type, x, y, customProps = {}) {
+            if (NODE_CONFIG[type]?.isCustomOp) {
+                registerCustomOpInPalette(type);
+            }
+            const id = 'node_' + (nextNodeId++);
+            const constCount = nodes.filter(n => n.type === 'CONST').length + 1;
+            const defaultAddr = getNextAvailableRamAddress();
+
+            const node = {
+                id,
+                type,
+                x: Math.max(10, Math.round(x)),
+                y: Math.max(10, Math.round(y)),
+                count: customProps.count !== undefined ? customProps.count : 1,
+                name: customProps.name !== undefined ? customProps.name : `CONST${constCount}`,
+                ramAddr: customProps.ramAddr !== undefined ? customProps.ramAddr : defaultAddr,
+                value: customProps.value !== undefined ? customProps.value : 1
+            };
+
+            nodes.push(node);
+            renderAll();
+            compileGraph();
+            return node;
+        }
+
+        function deleteNode(id) {
+            nodes = nodes.filter(n => n.id !== id);
+            connections = connections.filter(c => c.fromNode !== id && c.toNode !== id);
+            if (selectedNodeId === id) selectedNodeId = null;
+            renderAll();
+            compileGraph();
+        }
+
+        function spawnNodeAtCenter(type) {
+            const ws = document.getElementById('workspace');
+            const rect = ws.getBoundingClientRect();
+            const offset = (nodes.length % 6) * 25;
+            createNode(type, (rect.width / 2) - 105 + offset, (rect.height / 2) - 60 + offset);
+        }
+
+        function onPaletteDragStart(e, type) {
+            e.dataTransfer.setData('nodeType', type);
+        }
+
+        function onCanvasDrop(e) {
+            e.preventDefault();
+            const type = e.dataTransfer.getData('nodeType');
+            if (!type) return;
+            const ws = document.getElementById('workspace');
+            const rect = ws.getBoundingClientRect();
+            const x = e.clientX - rect.left - 105;
+            const y = e.clientY - rect.top - 25;
+            createNode(type, x, y);
+        }
+
+        function updateNodeProp(id, prop, val) {
+            const node = nodes.find(n => n.id === id);
+            if (!node) return;
+            if (prop === 'count') node.count = Math.max(1, Math.min(20, parseInt(val) || 1));
+            if (prop === 'name') node.name = val.toUpperCase().replace(/[^A-Z0-9_]/g, '').slice(0, 8) || 'VAR';
+            if (prop === 'ramAddr') node.ramAddr = Math.max(0, Math.min(31, parseInt(val) || 0));
+            if (prop === 'value') node.value = Math.max(0, Math.min(255, parseInt(val) || 0));
+            compileGraph();
+        }
+
+        // =========================================================================
+        // RENDERIZADO DE NODOS Y CABLES SVG
+        // =========================================================================
+        function renderAll() {
+            const container = document.getElementById('nodes-container');
+            container.innerHTML = '';
+
+            nodes.forEach(node => {
+                const cfg = NODE_CONFIG[node.type];
+                const el = document.createElement('div');
+                el.id = node.id;
+                el.className = `node-card ${selectedNodeId === node.id ? 'selected' : ''}`;
+                el.style.left = `${node.x}px`;
+                el.style.top = `${node.y}px`;
+
+                let bodyHtml = '';
+                const inCount = connections.filter(c => c.toNode === node.id).length;
+
+                if (node.type === 'INPUT') {
+                    bodyHtml = `
+                        <div class="space-y-1.5">
+                            <label class="text-[10px] uppercase tracking-wider text-slate-400 block">Cantidad de lecturas:</label>
+                            <input type="number" min="1" max="20" value="${node.count}"
+                                   onmousedown="event.stopPropagation()"
+                                   onchange="updateNodeProp('${node.id}', 'count', this.value)"
+                                   class="w-full px-2 py-1 rounded bg-slate-950 border border-slate-700 text-xs font-mono text-blue-300 focus:outline-none focus:border-blue-500">
+                            <p class="text-[10px] text-slate-400">${node.count > 1 ? `Bucle de ${node.count} entradas` : '1 lectura de teclado'}</p>
+                        </div>
+                    `;
+                } else if (node.type === 'CONST') {
+                    bodyHtml = `
+                        <div class="space-y-2">
+                            <div class="grid grid-cols-2 gap-1.5">
+                                <div>
+                                    <label class="text-[10px] text-slate-400 block">Nombre</label>
+                                    <input type="text" value="${node.name}"
+                                           onmousedown="event.stopPropagation()"
+                                           oninput="updateNodeProp('${node.id}', 'name', this.value)"
+                                           class="w-full px-2 py-1 rounded bg-slate-950 border border-slate-700 text-xs font-mono text-purple-300 focus:outline-none focus:border-purple-500">
+                                </div>
+                                <div>
+                                    <label class="text-[10px] text-slate-400 block">Dir. RAM (0-31)</label>
+                                    <input type="number" min="0" max="31" value="${node.ramAddr}"
+                                           onmousedown="event.stopPropagation()"
+                                           onchange="updateNodeProp('${node.id}', 'ramAddr', this.value)"
+                                           class="w-full px-2 py-1 rounded bg-slate-950 border border-slate-700 text-xs font-mono text-purple-300 focus:outline-none focus:border-purple-500">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-400 block">Valor Inicial (0 - 255)</label>
+                                <input type="number" min="0" max="255" value="${node.value}"
+                                       onmousedown="event.stopPropagation()"
+                                       onchange="updateNodeProp('${node.id}', 'value', this.value)"
+                                       class="w-full px-2 py-1 rounded bg-slate-950 border border-slate-700 text-xs font-mono text-white focus:outline-none focus:border-purple-500">
+                            </div>
+                        </div>
+                    `;
+                } else if (node.type === 'ADD') {
+                    bodyHtml = `
+                        <div class="text-[11px] text-slate-300">
+                            <div class="flex justify-between items-center">
+                                <span class="text-slate-400">Entradas conectadas:</span>
+                                <span class="font-mono font-bold text-amber-400">${inCount}</span>
+                            </div>
+                            <p class="text-[10px] text-slate-400 mt-1">Suma secuencial en Acumulador A.</p>
+                        </div>
+                    `;
+                } else if (node.type === 'SUB') {
+                    bodyHtml = `
+                        <div class="text-[11px] text-slate-300">
+                            <div class="flex justify-between items-center">
+                                <span class="text-slate-400">Entradas conectadas:</span>
+                                <span class="font-mono font-bold text-orange-400">${inCount}</span>
+                            </div>
+                            <p class="text-[10px] text-slate-400 mt-1">A = Entrada 1 − Entrada 2...</p>
+                        </div>
+                    `;
+                } else if (node.type === 'MAX') {
+                    bodyHtml = `
+                        <div class="text-[11px] text-slate-300">
+                            <div class="flex justify-between items-center">
+                                <span class="text-slate-400">Fuentes a comparar:</span>
+                                <span class="font-mono font-bold text-yellow-400">${inCount}</span>
+                            </div>
+                            <p class="text-[10px] text-slate-400 mt-1">Compara con SUB y salto JPOS.</p>
+                        </div>
+                    `;
+                } else if (['MCD', 'MOD', 'MUL', 'DIV', 'MIN', 'ABS', 'DBL'].includes(node.type)) {
+                    const descMap = {
+                        'MCD': 'Euclides: abs + while b != 0 (a % b)',
+                        'MOD': 'A = Entrada 1 % Entrada 2 (bucle SUB)',
+                        'MUL': 'A = Entrada 1 × Entrada 2 (bucle ADD)',
+                        'DIV': 'A = Entrada 1 // Entrada 2 (bucle SUB)',
+                        'MIN': 'Calcula el menor con SUB y JPOS',
+                        'ABS': 'Calcula |Entrada 1| usando Apos',
+                        'DBL': 'Calcula Entrada 1 × 2 (ADD A, X)'
+                    };
+                    bodyHtml = `
+                        <div class="text-[11px] text-slate-300">
+                            <div class="flex justify-between items-center">
+                                <span class="text-slate-400">Entradas conectadas:</span>
+                                <span class="font-mono font-bold text-cyan-400">${inCount}</span>
+                            </div>
+                            <p class="text-[10px] text-slate-400 mt-1">${descMap[node.type]}</p>
+                        </div>
+                    `;
+                } else if (node.type === 'HALT') {
+                    bodyHtml = `
+                        <div class="text-[11px] text-slate-300">
+                            <p class="text-emerald-300 font-medium">Muestra resultado en Output</p>
+                            <p class="text-[10px] text-slate-400 mt-0.5">Ejecuta LOAD A, RES + HALT (0xE0).</p>
+                        </div>
+                    `;
+                }
+
+                el.innerHTML = `
+                    <div class="px-3 py-2 rounded-t-[10px] ${cfg.headerBg} flex items-center justify-between cursor-move"
+                         onmousedown="startDragNode(event, '${node.id}')">
+                        <span class="text-xs font-bold tracking-tight">${cfg.title}</span>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/30">${cfg.badge}</span>
+                            <button onclick="deleteNode('${node.id}')" onmousedown="event.stopPropagation()"
+                                    class="text-slate-400 hover:text-rose-400 transition p-0.5" title="Eliminar caja">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="p-3 relative">
+                        ${cfg.hasIn ? `
+                            <div id="in_${node.id}" data-node="${node.id}" data-port="in"
+                                 onmouseup="finishConnection(event, '${node.id}')"
+                                 title="Puerto de Entrada (Suelta el cable aquí)"
+                                 style="background-color: #fbbf24; left: -7px; top: 50%; transform: translateY(-50%);"
+                                 class="port absolute"></div>
+                        ` : ''}
+
+                        ${bodyHtml}
+
+                        ${cfg.hasOut ? `
+                            <div id="out_${node.id}" data-node="${node.id}" data-port="out"
+                                 onmousedown="startConnection(event, '${node.id}')"
+                                 title="Puerto de Salida (Arrastra hacia otra caja)"
+                                 style="background-color: ${cfg.portColor}; right: -7px; top: 50%; transform: translateY(-50%);"
+                                 class="port absolute"></div>
+                        ` : ''}
+                    </div>
+                `;
+
+                container.appendChild(el);
+            });
+
+            renderWires();
+            requestAnimationFrame(renderWires);
+        }
+
+        function getPortPosition(nodeId, portType) {
+            const ws = document.getElementById('workspace').getBoundingClientRect();
+            const portEl = document.getElementById(`${portType}_${nodeId}`);
+            if (!portEl) return { x: 0, y: 0 };
+            const rect = portEl.getBoundingClientRect();
+            return {
+                x: rect.left - ws.left + rect.width / 2,
+                y: rect.top - ws.top + rect.height / 2
+            };
+        }
+
+        function createBezierPath(x1, y1, x2, y2) {
+            const dx = Math.max(Math.abs(x2 - x1) * 0.5, 50);
+            return `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+        }
+
+        function renderWires() {
+            const group = document.getElementById('connections-group');
+            group.innerHTML = '';
+
+            connections.forEach(conn => {
+                const p1 = getPortPosition(conn.fromNode, 'out');
+                const p2 = getPortPosition(conn.toNode, 'in');
+                const d = createBezierPath(p1.x, p1.y, p2.x, p2.y);
+
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', d);
+                path.setAttribute('class', 'wire-path');
+                path.setAttribute('stroke', 'url(#wireGrad)');
+                path.setAttribute('title', 'Clic para desconectar');
+                path.onclick = () => {
+                    connections = connections.filter(c => c.id !== conn.id);
+                    renderAll();
+                    compileGraph();
+                    showToast('Conexión eliminada');
+                };
+                group.appendChild(path);
+            });
+        }
+
+        // =========================================================================
+        // INTERACCIÓN DE ARRASTRE DE NODOS Y CONEXIÓN DE CABLES
+        // =========================================================================
+        function startDragNode(e, nodeId) {
+            e.stopPropagation();
+            selectedNodeId = nodeId;
+            draggingNode = nodes.find(n => n.id === nodeId);
+            const ws = document.getElementById('workspace').getBoundingClientRect();
+            dragOffset.x = (e.clientX - ws.left) - draggingNode.x;
+            dragOffset.y = (e.clientY - ws.top) - draggingNode.y;
+            
+            document.querySelectorAll('.node-card').forEach(c => c.classList.remove('selected'));
+            document.getElementById(nodeId).classList.add('selected');
+        }
+
+        function startConnection(e, nodeId) {
+            e.stopPropagation();
+            connectingFromNodeId = nodeId;
+            const p1 = getPortPosition(nodeId, 'out');
+            const tempWire = document.getElementById('temp-wire');
+            tempWire.style.display = 'block';
+            tempWire.setAttribute('d', createBezierPath(p1.x, p1.y, p1.x, p1.y));
+        }
+
+        function finishConnection(e, targetNodeId) {
+            e.stopPropagation();
+            if (!connectingFromNodeId || connectingFromNodeId === targetNodeId) {
+                cancelConnection();
+                return;
+            }
+
+            const exists = connections.some(c => c.fromNode === connectingFromNodeId && c.toNode === targetNodeId);
+            if (!exists) {
+                connections.push({
+                    id: 'conn_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+                    fromNode: connectingFromNodeId,
+                    toNode: targetNodeId
+                });
+                renderAll();
+                compileGraph();
+            }
+            cancelConnection();
+        }
+
+        function cancelConnection() {
+            connectingFromNodeId = null;
+            const tempWire = document.getElementById('temp-wire');
+            tempWire.style.display = 'none';
+        }
+
+        window.addEventListener('mousemove', (e) => {
+            const ws = document.getElementById('workspace').getBoundingClientRect();
+            const mouseX = e.clientX - ws.left;
+            const mouseY = e.clientY - ws.top;
+
+            if (draggingNode) {
+                draggingNode.x = Math.max(0, Math.min(ws.width - 210, mouseX - dragOffset.x));
+                draggingNode.y = Math.max(0, Math.min(ws.height - 90, mouseY - dragOffset.y));
+                const el = document.getElementById(draggingNode.id);
+                if (el) {
+                    el.style.left = `${draggingNode.x}px`;
+                    el.style.top = `${draggingNode.y}px`;
+                }
+                renderWires();
+            } else if (connectingFromNodeId) {
+                const p1 = getPortPosition(connectingFromNodeId, 'out');
+                const tempWire = document.getElementById('temp-wire');
+                tempWire.setAttribute('d', createBezierPath(p1.x, p1.y, mouseX, mouseY));
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            draggingNode = null;
+            if (connectingFromNodeId) {
+                cancelConnection();
+            }
+        });
+
+        // =========================================================================
+        // COMPILADOR VISUAL -> ENSAMBLADOR AR-2 -> LOGISIM (.HEX)
+        // =========================================================================
+        function toBin5(num) {
+            return (num & 0x1F).toString(2).padStart(5, '0');
+        }
+
+        function toHex2(num) {
+            return (num & 0xFF).toString(16).padStart(2, '0');
+        }
+
+        function compileGraph() {
+            let ram = Array(32).fill(0);
+            let ramMeta = Array(32).fill(null);
+            let asmInstructions = [];
+            let errors = [];
+            let uniqueCounter = 1;
+
+            // 1. Reservar primero las constantes definidas por el usuario
+            const constNodes = nodes.filter(n => n.type === 'CONST');
+            constNodes.forEach(c => {
+                const addr = parseInt(c.ramAddr);
+                if (ramMeta[addr]) {
+                    errors.push(`Conflicto de RAM en dirección ${addr} (${c.name})`);
+                }
+                ram[addr] = parseInt(c.value) & 0xFF;
+                ramMeta[addr] = { type: 'CONST', label: c.name, val: ram[addr] };
+            });
+
+            // Cache de constantes internas del sistema (UNO) para ahorrar bytes de RAM
+            let sharedConstAddrs = {};
+            function getSystemConstAddr(label, val) {
+                if (sharedConstAddrs[label] !== undefined) return sharedConstAddrs[label];
+                const addr = allocateInternalVar(label, val);
+                sharedConstAddrs[label] = addr;
+                return addr;
+            }
+
+            // Helper para asignar variables internas desde 31 hacia abajo sin pisar constantes
+            function allocateInternalVar(label, initVal = 0) {
+                for (let addr = 31; addr >= 0; addr--) {
+                    if (!ramMeta[addr]) {
+                        ram[addr] = initVal & 0xFF;
+                        ramMeta[addr] = { type: 'VAR', label, val: ram[addr] };
+                        return addr;
+                    }
+                }
+                errors.push(`Memoria RAM llena (32 bytes excedidos) al asignar ${label}`);
+                return 31;
+            }
+
+            function emit(instr) {
+                asmInstructions.push(instr);
+            }
+
+            const ALL_OPS = ['ADD', 'SUB', 'MAX', 'MCD', 'MOD', 'MUL', 'DIV', 'MIN', 'ABS', 'DBL'];
+            const haltNode = nodes.find(n => n.type === 'HALT');
+            const opNodes = nodes.filter(n => ALL_OPS.includes(n.type));
+
+            if (nodes.length === 0) {
+                renderCompilerOutputs(ram, ramMeta, [], ['Pizarra vacía: arrastra bloques para comenzar']);
+                return;
+            }
+
+            let rootNode = null;
+            if (haltNode) {
+                const incomingToHalt = connections.filter(c => c.toNode === haltNode.id);
+                if (incomingToHalt.length > 0) {
+                    rootNode = nodes.find(n => n.id === incomingToHalt[0].fromNode);
+                } else {
+                    errors.push('Conecta una operación o entrada al bloque Salida / HALT.');
+                }
+            } else if (opNodes.length > 0) {
+                rootNode = opNodes[opNodes.length - 1];
+                errors.push('Falta conectar el bloque final a "Salida / HALT".');
+            } else {
+                const singleSrc = nodes.find(n => ['INPUT', 'CONST'].includes(n.type));
+                if (singleSrc) {
+                    rootNode = singleSrc;
+                    errors.push('Conecta tu bloque a una Operación o a "Salida / HALT".');
+                }
+            }
+
+            let resultAddr = null;
+            if (rootNode) {
+                resultAddr = compileNodeRecursive(rootNode);
+            }
+
+            function getIncomingSources(nodeId) {
+                return connections
+                    .filter(c => c.toNode === nodeId)
+                    .map(c => nodes.find(n => n.id === c.fromNode))
+                    .filter(Boolean);
+            }
+
+            function compileNodeRecursive(node) {
+                if (!node) return null;
+
+                // Constante directa
+                if (node.type === 'CONST') {
+                    return parseInt(node.ramAddr);
+                }
+
+                // Entrada de teclado
+                if (node.type === 'INPUT') {
+                    const destAddr = allocateInternalVar(`IN_${node.id.split('_')[1]}`, 0);
+                    emit(`INPUT A`);
+                    emit(`STORE A, ${destAddr}`);
+                    return destAddr;
+                }
+
+                // MCD (Algoritmo de Euclides: a, b = abs(a), abs(b); while b != 0: a, b = b, a % b)
+                if (node.type === 'MCD') {
+                    const incoming = getIncomingSources(node.id);
+                    if (incoming.length < 2) {
+                        errors.push('La caja "MCD" necesita 2 entradas (a y b).');
+                        return null;
+                    }
+                    const [addrA, addrB] = incoming.map(src => compileNodeRecursive(src));
+                    if (addrA === null || addrB === null) return null;
+
+                    const uid = uniqueCounter++;
+                    const addrTmp = allocateInternalVar(`TMP_${uid}`, 0);
+                    const addrUno = getSystemConstAddr('UNO', 1);
+
+                    // abs(a) en addrA (usando doble SUB para no gastar RAM en CERO)
+                    emit(`LOAD A, ${addrA}`);
+                    emit(`JPOS abs_b_${uid}`);
+                    emit(`SUB A, ${addrA}`);
+                    emit(`SUB A, ${addrA}`);
+                    emit(`STORE A, ${addrA}`);
+
+                    // abs(b) en addrB
+                    emit(`abs_b_${uid}: LOAD A, ${addrB}`);
+                    emit(`JPOS loop_w_${uid}`);
+                    emit(`SUB A, ${addrB}`);
+                    emit(`SUB A, ${addrB}`);
+                    emit(`STORE A, ${addrB}`);
+
+                    // while b != 0:
+                    emit(`loop_w_${uid}: LOAD A, ${addrB}`);
+                    emit(`JZ end_w_${uid}`);
+
+                    // Guardar viejo b en TMP
+                    emit(`STORE A, ${addrTmp}`);
+
+                    // Calcular a % b directamente en addrA
+                    emit(`loop_m_${uid}: LOAD A, ${addrA}`);
+                    emit(`SUB A, ${addrB}`);
+                    emit(`JPOS sub_m_${uid}`);
+                    emit(`LOAD A, ${addrUno}`);
+                    emit(`JPOS done_m_${uid}`);
+                    emit(`sub_m_${uid}: STORE A, ${addrA}`);
+                    emit(`JPOS loop_m_${uid}`);
+
+                    // Desempaquetado a, b = TMP, (a % b)
+                    emit(`done_m_${uid}: LOAD A, ${addrA}`);
+                    emit(`STORE A, ${addrB}`);
+                    emit(`LOAD A, ${addrTmp}`);
+                    emit(`STORE A, ${addrA}`);
+                    emit(`JPOS loop_w_${uid}`);
+
+                    emit(`end_w_${uid}: LOAD A, ${addrA}`);
+                    return addrA;
+                }
+
+                // MÓDULO (MOD: a % b mediante restas sucesivas)
+                if (node.type === 'MOD') {
+                    const incoming = getIncomingSources(node.id);
+                    if (incoming.length < 2) {
+                        errors.push('La caja "Módulo (MOD)" necesita 2 entradas (a y b).');
+                        return null;
+                    }
+                    const [addrA, addrB] = incoming.map(src => compileNodeRecursive(src));
+                    if (addrA === null || addrB === null) return null;
+
+                    const uid = uniqueCounter++;
+                    const addrRem = allocateInternalVar(`MOD_${uid}`, 0);
+                    const addrUno = getSystemConstAddr('UNO', 1);
+
+                    emit(`LOAD A, ${addrA}`);
+                    emit(`STORE A, ${addrRem}`);
+                    emit(`lop_mod_${uid}: LOAD A, ${addrRem}`);
+                    emit(`SUB A, ${addrB}`);
+                    emit(`JPOS sav_mod_${uid}`);
+                    emit(`LOAD A, ${addrUno}`);
+                    emit(`JPOS fin_mod_${uid}`);
+                    emit(`sav_mod_${uid}: STORE A, ${addrRem}`);
+                    emit(`JPOS lop_mod_${uid}`);
+                    emit(`fin_mod_${uid}: LOAD A, ${addrRem}`);
+                    return addrRem;
+                }
+
+                // SUMAR (ADD)
+                if (node.type === 'ADD') {
+                    const incoming = getIncomingSources(node.id);
+                    if (incoming.length === 0) {
+                        errors.push('La caja "Sumar" no tiene entradas conectadas.');
+                        return null;
+                    }
+
+                    if (incoming.length === 1 && incoming[0].type === 'INPUT' && incoming[0].count > 1) {
+                        const totalCount = incoming[0].count;
+                        const addrCont = allocateInternalVar('CONT', totalCount);
+                        const addrUno  = getSystemConstAddr('UNO', 1);
+                        const addrAcum = allocateInternalVar('ACUM', 0);
+                        const addrTemp = allocateInternalVar('TEMP', 0);
+
+                        emit(`bucle_sum: INPUT A`);
+                        emit(`STORE A, ${addrTemp}`);
+                        emit(`LOAD A, ${addrAcum}`);
+                        emit(`ADD A, ${addrTemp}`);
+                        emit(`STORE A, ${addrAcum}`);
+                        emit(`LOAD A, ${addrCont}`);
+                        emit(`SUB A, ${addrUno}`);
+                        emit(`STORE A, ${addrCont}`);
+                        emit(`JZ fin_sum`);
+                        emit(`JPOS bucle_sum`);
+                        emit(`fin_sum: LOAD A, ${addrAcum}`);
+                        return addrAcum;
+                    }
+
+                    const operandAddrs = incoming.map(src => compileNodeRecursive(src)).filter(a => a !== null);
+                    if (operandAddrs.length === 0) return null;
+
+                    const addrAcum = allocateInternalVar(`SUMA_${uniqueCounter++}`, 0);
+                    emit(`LOAD A, ${operandAddrs[0]}`);
+                    for (let i = 1; i < operandAddrs.length; i++) {
+                        emit(`ADD A, ${operandAddrs[i]}`);
+                    }
+                    emit(`STORE A, ${addrAcum}`);
+                    return addrAcum;
+                }
+
+                // RESTAR (SUB)
+                if (node.type === 'SUB') {
+                    const incoming = getIncomingSources(node.id);
+                    if (incoming.length < 2) {
+                        errors.push('La caja "Restar" necesita al menos 2 entradas conectadas.');
+                        return null;
+                    }
+
+                    const operandAddrs = incoming.map(src => compileNodeRecursive(src)).filter(a => a !== null);
+                    const addrRes = allocateInternalVar(`RESTA_${uniqueCounter++}`, 0);
+                    emit(`LOAD A, ${operandAddrs[0]}`);
+                    for (let i = 1; i < operandAddrs.length; i++) {
+                        emit(`SUB A, ${operandAddrs[i]}`);
+                    }
+                    emit(`STORE A, ${addrRes}`);
+                    return addrRes;
+                }
+
+                // MULTIPLICAR (MUL - sumas sucesivas usando ADD, SUB, JZ, JPOS)
+                if (node.type === 'MUL') {
+                    const incoming = getIncomingSources(node.id);
+                    if (incoming.length < 2) {
+                        errors.push('La caja "Multiplicar (MUL)" necesita 2 entradas conectadas.');
+                        return null;
+                    }
+                    const [addrA, addrB] = incoming.map(src => compileNodeRecursive(src));
+                    if (addrA === null || addrB === null) return null;
+
+                    const uid = uniqueCounter++;
+                    const addrProd = allocateInternalVar(`PROD_${uid}`, 0);
+                    const addrCnt  = allocateInternalVar(`MCNT_${uid}`, 0);
+                    const addrUno  = getSystemConstAddr('UNO', 1);
+
+                    emit(`LOAD A, ${addrB}`);
+                    emit(`STORE A, ${addrCnt}`);
+                    emit(`JZ fin_mul_${uid}`);
+                    emit(`lop_mul_${uid}: LOAD A, ${addrProd}`);
+                    emit(`ADD A, ${addrA}`);
+                    emit(`STORE A, ${addrProd}`);
+                    emit(`LOAD A, ${addrCnt}`);
+                    emit(`SUB A, ${addrUno}`);
+                    emit(`STORE A, ${addrCnt}`);
+                    emit(`JZ fin_mul_${uid}`);
+                    emit(`JPOS lop_mul_${uid}`);
+                    emit(`fin_mul_${uid}: LOAD A, ${addrProd}`);
+                    return addrProd;
+                }
+
+                // DIVIDIR ENTERO (DIV - restas sucesivas usando SUB, ADD, JPOS)
+                if (node.type === 'DIV') {
+                    const incoming = getIncomingSources(node.id);
+                    if (incoming.length < 2) {
+                        errors.push('La caja "Dividir (DIV)" necesita 2 entradas (dividendo y divisor).');
+                        return null;
+                    }
+                    const [addrDividendo, addrDivisor] = incoming.map(src => compileNodeRecursive(src));
+                    if (addrDividendo === null || addrDivisor === null) return null;
+
+                    const uid = uniqueCounter++;
+                    const addrCoc = allocateInternalVar(`COC_${uid}`, 0);
+                    const addrRem = allocateInternalVar(`REM_${uid}`, 0);
+                    const addrUno = getSystemConstAddr('UNO', 1);
+
+                    emit(`LOAD A, ${addrDividendo}`);
+                    emit(`STORE A, ${addrRem}`);
+                    emit(`lop_div_${uid}: LOAD A, ${addrRem}`);
+                    emit(`SUB A, ${addrDivisor}`);
+                    emit(`JPOS ok_div_${uid}`);
+                    emit(`LOAD A, ${addrUno}`);
+                    emit(`JPOS fin_div_${uid}`);
+                    emit(`ok_div_${uid}: STORE A, ${addrRem}`);
+                    emit(`LOAD A, ${addrCoc}`);
+                    emit(`ADD A, ${addrUno}`);
+                    emit(`STORE A, ${addrCoc}`);
+                    emit(`LOAD A, ${addrUno}`);
+                    emit(`JPOS lop_div_${uid}`);
+                    emit(`fin_div_${uid}: LOAD A, ${addrCoc}`);
+                    return addrCoc;
+                }
+
+                // VALOR ABSOLUTO (ABS - basado en bit de signo Apos)
+                if (node.type === 'ABS') {
+                    const incoming = getIncomingSources(node.id);
+                    if (incoming.length < 1) {
+                        errors.push('La caja "Valor Absoluto (ABS)" necesita 1 entrada conectada.');
+                        return null;
+                    }
+                    const addrX = compileNodeRecursive(incoming[0]);
+                    if (addrX === null) return null;
+
+                    const uid = uniqueCounter++;
+                    const addrRes = allocateInternalVar(`ABS_${uid}`, 0);
+
+                    emit(`LOAD A, ${addrX}`);
+                    emit(`JPOS ok_abs_${uid}`);
+                    emit(`SUB A, ${addrX}`);
+                    emit(`SUB A, ${addrX}`);
+                    emit(`ok_abs_${uid}: STORE A, ${addrRes}`);
+                    return addrRes;
+                }
+
+                // DUPLICAR (DBL - ADD A, X)
+                if (node.type === 'DBL') {
+                    const incoming = getIncomingSources(node.id);
+                    if (incoming.length < 1) {
+                        errors.push('La caja "Duplicar (x2)" necesita 1 entrada conectada.');
+                        return null;
+                    }
+                    const addrX = compileNodeRecursive(incoming[0]);
+                    if (addrX === null) return null;
+
+                    const addrRes = allocateInternalVar(`DBL_${uniqueCounter++}`, 0);
+                    emit(`LOAD A, ${addrX}`);
+                    emit(`ADD A, ${addrX}`);
+                    emit(`STORE A, ${addrRes}`);
+                    return addrRes;
+                }
+
+                // MENOR (MIN)
+                if (node.type === 'MIN') {
+                    const incoming = getIncomingSources(node.id);
+                    if (incoming.length === 0) {
+                        errors.push('La caja "Menor (MIN)" no tiene entradas conectadas.');
+                        return null;
+                    }
+                    const operandAddrs = incoming.map(src => compileNodeRecursive(src)).filter(a => a !== null);
+                    const addrMin = allocateInternalVar(`MIN_${uniqueCounter++}`, 0);
+                    const addrUno = getSystemConstAddr('UNO', 1);
+
+                    emit(`LOAD A, ${operandAddrs[0]}`);
+                    emit(`STORE A, ${addrMin}`);
+
+                    for (let i = 1; i < operandAddrs.length; i++) {
+                        const lblKeep = `kmin_${i}`;
+                        const lblNext = `nmin_${i}`;
+                        emit(`LOAD A, ${addrMin}`);
+                        emit(`SUB A, ${operandAddrs[i]}`);
+                        emit(`JPOS ${lblKeep}`);
+                        emit(`LOAD A, ${addrUno}`);
+                        emit(`JPOS ${lblNext}`);
+                        emit(`${lblKeep}: LOAD A, ${operandAddrs[i]}`);
+                        emit(`STORE A, ${addrMin}`);
+                        emit(`${lblNext}: LOAD A, ${addrMin}`);
+                    }
+                    return addrMin;
+                }
+
+                // MAYOR (MAX)
+                if (node.type === 'MAX') {
+                    const incoming = getIncomingSources(node.id);
+                    if (incoming.length === 0) {
+                        errors.push('La caja "Mayor (MAX)" no tiene entradas conectadas.');
+                        return null;
+                    }
+
+                    const allInputs = incoming.every(n => n.type === 'INPUT');
+                    const totalInputsCount = incoming.reduce((acc, n) => acc + (n.type === 'INPUT' ? n.count : 0), 0);
+
+                    if (allInputs && totalInputsCount >= 2) {
+                        const addrCont = allocateInternalVar('CONT', totalInputsCount - 1);
+                        const addrUno  = getSystemConstAddr('UNO', 1);
+                        const addrMax  = allocateInternalVar('MAX', 0);
+                        const addrTemp = allocateInternalVar('TEMP', 0);
+
+                        emit(`INPUT A`);
+                        emit(`STORE A, ${addrMax}`);
+                        emit(`bucle_max: INPUT A`);
+                        emit(`STORE A, ${addrTemp}`);
+                        emit(`SUB A, ${addrMax}`);
+                        emit(`JPOS act_max`);
+                        emit(`sig_max: LOAD A, ${addrCont}`);
+                        emit(`SUB A, ${addrUno}`);
+                        emit(`STORE A, ${addrCont}`);
+                        emit(`JZ fin_max`);
+                        emit(`JPOS bucle_max`);
+                        emit(`act_max: LOAD A, ${addrTemp}`);
+                        emit(`STORE A, ${addrMax}`);
+                        emit(`LOAD A, ${addrUno}`);
+                        emit(`JPOS sig_max`);
+                        emit(`fin_max: LOAD A, ${addrMax}`);
+                        return addrMax;
+                    } else {
+                        const operandAddrs = incoming.map(src => compileNodeRecursive(src)).filter(a => a !== null);
+                        if (operandAddrs.length === 0) return null;
+
+                        const addrMax = allocateInternalVar('MAX', 0);
+                        const addrUno = getSystemConstAddr('UNO', 1);
+
+                        emit(`LOAD A, ${operandAddrs[0]}`);
+                        emit(`STORE A, ${addrMax}`);
+
+                        for (let i = 1; i < operandAddrs.length; i++) {
+                            const lblUpdate = `upd_${i}`;
+                            const lblNext   = `nxt_${i}`;
+                            emit(`LOAD A, ${operandAddrs[i]}`);
+                            emit(`SUB A, ${addrMax}`);
+                            emit(`JPOS ${lblUpdate}`);
+                            emit(`LOAD A, ${addrUno}`);
+                            emit(`JPOS ${lblNext}`);
+                            emit(`${lblUpdate}: LOAD A, ${operandAddrs[i]}`);
+                            emit(`STORE A, ${addrMax}`);
+                            emit(`${lblNext}: LOAD A, ${addrMax}`);
+                        }
+                        return addrMax;
+                    }
+                }
+
+                return null;
+            }
+
+            if (haltNode && resultAddr !== null) {
+                emit(`LOAD A, ${resultAddr}`);
+                emit(`HALT`);
+            } else if (resultAddr !== null) {
+                emit(`HALT`);
+            }
+
+            // =====================================================================
+            // ENSAMBLADOR DE DOS PASADAS (ETIQUETAS + CÓDIGO MÁQUINA AR-2)
+            // =====================================================================
+            let labels = {};
+            let cleanInstrs = [];
+            let pc = 0;
+
+            asmInstructions.forEach(line => {
+                if (line.includes(':')) {
+                    const [lbl, rest] = line.split(':');
+                    labels[lbl.trim()] = pc;
+                    if (rest && rest.trim()) {
+                        cleanInstrs.push({ pc, text: rest.trim(), label: lbl.trim() });
+                        pc++;
+                    }
+                } else {
+                    cleanInstrs.push({ pc, text: line.trim(), label: null });
+                    pc++;
+                }
+            });
+
+            let assembledRows = [];
+            cleanInstrs.forEach(item => {
+                if (item.pc >= 32) {
+                    errors.push('El programa excede las 32 instrucciones de RAM.');
+                    return;
+                }
+                if (ramMeta[item.pc]) {
+                    errors.push(`Colisión en RAM[${item.pc}]: el código pisó la variable "${ramMeta[item.pc].label}".`);
+                }
+
+                const tokens = item.text.split(/[\s,]+/);
+                const op = tokens[0].toUpperCase();
+                const binOp = OPCODES[op] || '000';
+                let binAddr = '00000';
+
+                if (['LOAD', 'STORE', 'ADD', 'SUB', 'JZ', 'JPOS'].includes(op)) {
+                    const arg = tokens[tokens.length - 1];
+                    if (labels[arg] !== undefined) {
+                        binAddr = toBin5(labels[arg]);
+                    } else if (!isNaN(arg)) {
+                        binAddr = toBin5(parseInt(arg));
+                    }
+                }
+
+                const binFull = binOp + binAddr;
+                const byteVal = parseInt(binFull, 2);
+                ram[item.pc] = byteVal;
+                ramMeta[item.pc] = {
+                    type: 'CODE',
+                    label: item.label ? `${item.label}: ${item.text}` : item.text,
+                    val: byteVal
+                };
+
+                assembledRows.push({
+                    pc: item.pc,
+                    label: item.label,
+                    text: item.text,
+                    bin: binFull,
+                    hex: toHex2(byteVal).toUpperCase()
+                });
+            });
+
+            renderCompilerOutputs(ram, ramMeta, assembledRows, errors);
+        }
+
+        function renderCompilerOutputs(ram, ramMeta, assembledRows, errors) {
+            const row0 = ram.slice(0, 16).map(b => toHex2(b)).join(' ');
+            const row1 = ram.slice(16, 32).map(b => toHex2(b)).join(' ');
+            const logisimText = `v3.0 hex words addressed\n00: ${row0}\n10: ${row1}`;
+            document.getElementById('hex-output').innerText = logisimText;
+
+            const usedBytes = ramMeta.filter(m => m !== null).length;
+            document.getElementById('ram-usage-badge').innerText = `${usedBytes} / 32 Bytes`;
+
+            const statusEl = document.getElementById('compile-status');
+            if (errors.length > 0) {
+                statusEl.className = 'px-3 py-2 bg-amber-950/40 border-b border-amber-500/30 text-[11px] text-amber-300 flex items-center gap-2';
+                statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span><span>${errors[0]}</span>`;
+            } else {
+                statusEl.className = 'px-3 py-2 bg-emerald-950/30 border-b border-emerald-500/20 text-[11px] text-emerald-300 flex items-center gap-2';
+                statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0"></span><span>Compilado con éxito (${assembledRows.length} instrucciones)</span>`;
+            }
+
+            const asmEl = document.getElementById('asm-output');
+            if (assembledRows.length === 0) {
+                asmEl.innerHTML = `<div class="p-3 text-slate-500 text-center">Sin instrucciones generadas aún.</div>`;
+            } else {
+                asmEl.innerHTML = assembledRows.map(r => `
+                    <div class="px-2.5 py-1.5 flex items-center justify-between hover:bg-slate-900/80">
+                        <div class="flex items-center gap-2 truncate">
+                            <span class="text-slate-500">${r.pc.toString().padStart(2, '0')}</span>
+                            <span class="text-slate-200 truncate">
+                                ${r.label ? `<span class="text-amber-400">${r.label}:</span> ` : ''}${r.text}
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <span class="text-slate-500 text-[10px]">${r.bin}</span>
+                            <span class="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-bold">${r.hex}</span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            const ramGrid = document.getElementById('ram-grid');
+            ramGrid.innerHTML = ram.map((val, idx) => {
+                const meta = ramMeta[idx];
+                let bgClass = 'bg-slate-950 border-slate-800 text-slate-500';
+                let tag = 'LIBRE';
+                if (meta) {
+                    if (meta.type === 'CODE') {
+                        bgClass = 'bg-blue-950/40 border-blue-500/30 text-blue-300';
+                        tag = 'PROG';
+                    } else if (meta.type === 'CONST') {
+                        bgClass = 'bg-purple-950/40 border-purple-500/30 text-purple-300';
+                        tag = meta.label;
+                    } else {
+                        bgClass = 'bg-amber-950/40 border-amber-500/30 text-amber-300';
+                        tag = meta.label;
+                    }
+                }
+                return `
+                    <div class="p-1.5 rounded border ${bgClass} flex flex-col justify-between" title="${meta ? meta.label : 'Vacío'}">
+                        <div class="flex justify-between text-[9px] opacity-75">
+                            <span>${idx.toString().padStart(2, '0')}</span>
+                            <span>0x${toHex2(idx).toUpperCase()}</span>
+                        </div>
+                        <div class="text-xs font-bold text-center my-0.5">${toHex2(val).toUpperCase()}</div>
+                        <div class="text-[8px] truncate text-center opacity-80">${tag}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // =========================================================================
+        // COMPILADOR PYTHON -> AUTO-GRAFICADO DE NODOS -> ENSAMBLADOR & LOGISIM
+        // Soporta: def (con o sin llamada externa), while, tuplas, %, abs, max, min
+        // =========================================================================
+        const PYTHON_PRESETS = {
+            'mcd': `def mcd_iterativo(a: int, b: int) -> int:\n    a, b = abs(a), abs(b)\n    while b != 0:\n        a, b = b, a % b\n    return a\n\n\nprint(mcd_iterativo(105, 70))  # 35`,
+            'max3': `x1 = int(input())\nx2 = int(input())\nx3 = int(input())\nmayor = max(x1, x2, x3)\nprint(mayor)`,
+            'mul': `a = int(input())\nb = 4\nprod = a * b\nprint(prod)`,
+            'div': `dividendo = int(input())\ndivisor = int(input())\ncociente = dividendo // divisor\nprint(cociente)`,
+            'expr': `a = int(input())\nb = int(input())\nc = 5\nres = (a + b) - c\nprint(res)`
+        };
+
+        function loadPythonPreset(key) {
+            if (PYTHON_PRESETS[key]) {
+                document.getElementById('python-code-input').value = PYTHON_PRESETS[key];
+            }
+        }
+
+        function compilePythonToAR2() {
+            const rawCode = document.getElementById('python-code-input').value;
+            const rawLines = rawCode
+                .split('\n')
+                .map(l => {
+                    const noComment = l.replace(/#.*$/, '');
+                    const indent = noComment.match(/^\s*/)[0].length;
+                    return { indent, text: noComment.trim() };
+                })
+                .filter(l => l.text.length > 0);
+
+            if (rawLines.length === 0) {
+                showToast('Escribe código Python primero');
+                return;
+            }
+
+            clearCanvas();
+            let functions = {};     // fnName -> { params: [...], body: [...] }
+            let functionOrder = []; // Orden de definición
+            let symbolNodes = {};   // varName -> nodeId
+            let colY = { 0: 30, 1: 80, 2: 140, 3: 180 };
+            let nextRamConst = 31;
+            let lastExprNodeId = null;
+            let hasPrint = false;
+
+            function addLayoutNode(type, col, props = {}) {
+                const x = 35 + col * 245;
+                const y = colY[col] || 40;
+                colY[col] = y + (type === 'CONST' ? 145 : 105);
+                return createNode(type, x, y, props);
+            }
+
+            function linkNodes(fromId, toId) {
+                if (!fromId || !toId) return;
+                connections.push({
+                    id: 'py_c_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+                    fromNode: fromId,
+                    toNode: toId
+                });
+            }
+
+            function splitTopLevelArgs(str, sep) {
+                let parts = [], cur = '', bal = 0;
+                for (let ch of str) {
+                    if (ch === '(') bal++;
+                    else if (ch === ')') bal--;
+                    if (ch === sep && bal === 0) {
+                        parts.push(cur.trim());
+                        cur = '';
+                    } else {
+                        cur += ch;
+                    }
+                }
+                if (cur.trim()) parts.push(cur.trim());
+                return parts;
+            }
+
+            function findTopLevelOperator(expr, ops) {
+                let bal = 0;
+                for (let i = expr.length - 1; i >= 0; i--) {
+                    const ch = expr[i];
+                    if (ch === ')') bal++;
+                    else if (ch === '(') bal--;
+                    if (bal !== 0) continue;
+
+                    for (const op of ops) {
+                        if (op.length === 2 && i >= 1 && expr.slice(i - 1, i + 1) === op) {
+                            const left = expr.slice(0, i - 1).trim();
+                            const right = expr.slice(i + 1).trim();
+                            if (left && right) return { op, left, right };
+                        } else if (op.length === 1 && ch === op) {
+                            if (op === '/' && (expr[i - 1] === '/' || expr[i + 1] === '/')) continue;
+                            const left = expr.slice(0, i).trim();
+                            const right = expr.slice(i + 1).trim();
+                            if (left && right) return { op, left, right };
+                        }
+                    }
+                }
+                return null;
+            }
+
+            function instantiateFunctionCall(fnName, argExprs, depth = 1, localScope = {}) {
+                const fnDef = functions[fnName];
+                const argNodeIds = argExprs.map((arg, idx) => {
+                    const paramName = (fnDef.params[idx] || `ARG${idx + 1}`).toUpperCase().slice(0, 8);
+                    const cleanArg = arg.trim();
+                    if (/^-?\d+$/.test(cleanArg)) {
+                        const val = parseInt(cleanArg, 10) & 0xFF;
+                        return addLayoutNode('CONST', 0, {
+                            name: paramName,
+                            ramAddr: nextRamConst--,
+                            value: val
+                        }).id;
+                    }
+                    return parseExpression(cleanArg, depth, localScope);
+                });
+
+                // Detectar patrón iterativo de Euclides (while ... % ...) -> sintetizar bloque MCD
+                const bodyJoined = fnDef.body.map(b => b.text).join(' ; ');
+                if (bodyJoined.includes('while') && bodyJoined.includes('%')) {
+                    const mcdNode = addLayoutNode('MCD', Math.min(depth + 1, 2));
+                    argNodeIds.forEach(id => linkNodes(id, mcdNode.id));
+                    return mcdNode.id;
+                }
+
+                // Ejecutar sentencias de la función con ámbito local
+                let fnScope = {};
+                fnDef.params.forEach((p, idx) => {
+                    if (argNodeIds[idx]) fnScope[p] = argNodeIds[idx];
+                });
+                return executeStatementBlock(fnDef.body, fnScope, depth);
+            }
+
+            // Analizador de expresiones Python
+            function parseExpression(expr, depth = 1, localScope = {}) {
+                expr = expr.trim();
+
+                // Quitar paréntesis envolventes balanceados
+                while (expr.startsWith('(') && expr.endsWith(')')) {
+                    let bal = 0, wrapsAll = true;
+                    for (let i = 0; i < expr.length; i++) {
+                        if (expr[i] === '(') bal++;
+                        else if (expr[i] === ')') bal--;
+                        if (bal === 0 && i < expr.length - 1) {
+                            wrapsAll = false;
+                            break;
+                        }
+                    }
+                    if (wrapsAll) expr = expr.slice(1, -1).trim();
+                    else break;
+                }
+
+                // Entrada por teclado: int(input()) o input()
+                if (/^(int\s*\(\s*)?input\s*\(\s*\)\s*\)?$/.test(expr)) {
+                    const n = addLayoutNode('INPUT', 0, { count: 1 });
+                    return n.id;
+                }
+
+                // Llamadas a funciones: max(...), min(...), abs(...) o funciones definidas con def
+                const fnMatch = expr.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*\((.*)\)$/);
+                if (fnMatch) {
+                    const rawName = fnMatch[1];
+                    const upperName = rawName.toUpperCase();
+                    const args = splitTopLevelArgs(fnMatch[2], ',');
+
+                    if (['MAX', 'MIN', 'ABS'].includes(upperName)) {
+                        const opNode = addLayoutNode(upperName, Math.min(depth, 2));
+                        args.forEach(arg => {
+                            const childId = parseExpression(arg, depth + 1, localScope);
+                            linkNodes(childId, opNode.id);
+                        });
+                        return opNode.id;
+                    }
+
+                    if (functions[rawName]) {
+                        return instantiateFunctionCall(rawName, args, depth, localScope);
+                    }
+                }
+
+                // Operadores de menor precedencia (+, -)
+                const addSubSplit = findTopLevelOperator(expr, ['+', '-']);
+                if (addSubSplit) {
+                    const opType = addSubSplit.op === '+' ? 'ADD' : 'SUB';
+                    const leftId = parseExpression(addSubSplit.left, depth, localScope);
+                    const rightId = parseExpression(addSubSplit.right, depth, localScope);
+                    const opNode = addLayoutNode(opType, Math.min(depth + 1, 2));
+                    linkNodes(leftId, opNode.id);
+                    linkNodes(rightId, opNode.id);
+                    return opNode.id;
+                }
+
+                // Operadores de mayor precedencia (//, *, %, /)
+                const mulDivSplit = findTopLevelOperator(expr, ['//', '*', '%', '/']);
+                if (mulDivSplit) {
+                    const opMap = { '*': 'MUL', '//': 'DIV', '/': 'DIV', '%': 'MOD' };
+                    const opType = opMap[mulDivSplit.op];
+                    const leftId = parseExpression(mulDivSplit.left, depth, localScope);
+                    const rightId = parseExpression(mulDivSplit.right, depth, localScope);
+                    const opNode = addLayoutNode(opType, Math.min(depth + 1, 2));
+                    linkNodes(leftId, opNode.id);
+                    linkNodes(rightId, opNode.id);
+                    return opNode.id;
+                }
+
+                // Literal numérico -> Nodo CONST
+                if (/^-?\d+$/.test(expr)) {
+                    const val = parseInt(expr, 10) & 0xFF;
+                    const cNode = addLayoutNode('CONST', 0, {
+                        name: `K_${Math.abs(parseInt(expr, 10))}`,
+                        ramAddr: nextRamConst--,
+                        value: val
+                    });
+                    return cNode.id;
+                }
+
+                // Variable en ámbito local o global
+                if (localScope[expr]) return localScope[expr];
+                if (symbolNodes[expr]) return symbolNodes[expr];
+
+                throw new Error(`Identificador o expresión no soportada: "${expr}"`);
+            }
+
+            function executeStatementBlock(stmtList, scope, depth = 1) {
+                let retId = null;
+                let idx = 0;
+
+                while (idx < stmtList.length) {
+                    const line = stmtList[idx].text;
+
+                    // return expr
+                    const retMatch = line.match(/^return\s+(.+)$/);
+                    if (retMatch) {
+                        retId = parseExpression(retMatch[1], depth, scope);
+                        lastExprNodeId = retId;
+                        idx++;
+                        continue;
+                    }
+
+                    // print(...)
+                    const printMatch = line.match(/^print\s*\((.*)\)$/);
+                    if (printMatch) {
+                        const outNodeId = parseExpression(printMatch[1], 2, scope);
+                        const haltNode = addLayoutNode('HALT', 3);
+                        linkNodes(outNodeId, haltNode.id);
+                        lastExprNodeId = outNodeId;
+                        hasPrint = true;
+                        idx++;
+                        continue;
+                    }
+
+                    // Bucle while cond:
+                    const whileMatch = line.match(/^while\s+(.+):$/);
+                    if (whileMatch) {
+                        const baseIndent = stmtList[idx].indent;
+                        let body = [];
+                        idx++;
+                        while (idx < stmtList.length && stmtList[idx].indent > baseIndent) {
+                            body.push(stmtList[idx]);
+                            idx++;
+                        }
+                        const joined = body.map(b => b.text).join(' ');
+                        if (joined.includes('%')) {
+                            const vars = Object.values(scope);
+                            if (vars.length >= 2) {
+                                const mcdNode = addLayoutNode('MCD', Math.min(depth + 1, 2));
+                                linkNodes(vars[0], mcdNode.id);
+                                linkNodes(vars[1], mcdNode.id);
+                                const firstVarName = Object.keys(scope)[0];
+                                scope[firstVarName] = mcdNode.id;
+                                retId = mcdNode.id;
+                                lastExprNodeId = mcdNode.id;
+                            }
+                        }
+                        continue;
+                    }
+
+                    // Asignación simple o múltiple (tupla): a, b = expr1, expr2
+                    const assignMatch = line.match(/^([a-zA-Z_][a-zA-Z0-9_,\s]*)\s*=\s*(.+)$/);
+                    if (assignMatch && !line.includes('==') && !line.includes('!=')) {
+                        const lhsParts = splitTopLevelArgs(assignMatch[1], ',');
+                        const rhsParts = splitTopLevelArgs(assignMatch[2], ',');
+
+                        const evaluatedIds = rhsParts.map((rhs, i) => {
+                            const targetName = (lhsParts[i] || `V${i}`).trim().toUpperCase().slice(0, 8);
+                            if (/^-?\d+$/.test(rhs)) {
+                                const val = parseInt(rhs, 10) & 0xFF;
+                                return addLayoutNode('CONST', 0, {
+                                    name: targetName,
+                                    ramAddr: nextRamConst--,
+                                    value: val
+                                }).id;
+                            }
+                            return parseExpression(rhs, depth, scope);
+                        });
+
+                        lhsParts.forEach((lhs, i) => {
+                            const vName = lhs.trim();
+                            if (evaluatedIds[i]) {
+                                scope[vName] = evaluatedIds[i];
+                                lastExprNodeId = evaluatedIds[i];
+                                retId = evaluatedIds[i];
+                            }
+                        });
+                        idx++;
+                        continue;
+                    }
+
+                    // Llamada directa a función como sentencia independiente: mcd_iterativo(105, 70)
+                    const standaloneCallMatch = line.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*\((.*)\)$/);
+                    if (standaloneCallMatch && functions[standaloneCallMatch[1]]) {
+                        const resId = parseExpression(line, depth, scope);
+                        lastExprNodeId = resId;
+                        retId = resId;
+                        idx++;
+                        continue;
+                    }
+
+                    throw new Error(`Sentencia no reconocida: "${line}"`);
+                }
+
+                return retId;
+            }
+
+            try {
+                // Primera pasada: recolectar definiciones de funciones (def ...)
+                let topLevelStmts = [];
+                let i = 0;
+                while (i < rawLines.length) {
+                    const current = rawLines[i];
+                    const defMatch = current.text.match(/^def\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(([^)]*)\)\s*(?:->\s*[^:]+)?\s*:$/);
+                    if (defMatch) {
+                        const fnName = defMatch[1];
+                        const rawParams = defMatch[2].trim();
+                        const params = rawParams
+                            ? rawParams.split(',').map(p => p.split(':')[0].trim()).filter(Boolean)
+                            : [];
+                        const defIndent = current.indent;
+                        let body = [];
+                        i++;
+                        while (i < rawLines.length && rawLines[i].indent > defIndent) {
+                            body.push(rawLines[i]);
+                            i++;
+                        }
+                        functions[fnName] = { params, body };
+                        functionOrder.push(fnName);
+                    } else {
+                        topLevelStmts.push(current);
+                        i++;
+                    }
+                }
+
+                // Segunda pasada: ejecutar sentencias principales o auto-instanciar def con INPUT
+                let autoInstantiatedFn = null;
+                if (topLevelStmts.length > 0) {
+                    executeStatementBlock(topLevelStmts, symbolNodes, 1);
+                } else if (functionOrder.length > 0) {
+                    autoInstantiatedFn = functionOrder[functionOrder.length - 1];
+                    const fnDef = functions[autoInstantiatedFn];
+                    const inputArgs = fnDef.params.map(() => 'int(input())');
+                    lastExprNodeId = instantiateFunctionCall(autoInstantiatedFn, inputArgs, 1, symbolNodes);
+                }
+
+                // Si no hubo print() explícito, conectar el resultado al bloque HALT automáticamente
+                if (!hasPrint && lastExprNodeId) {
+                    const haltNode = addLayoutNode('HALT', 3);
+                    linkNodes(lastExprNodeId, haltNode.id);
+                }
+
+                renderAll();
+                compileGraph();
+
+                if (nodes.length === 0) {
+                    showToast('No se generaron bloques. Agrega una expresión o llamada.');
+                } else if (autoInstantiatedFn) {
+                    showToast(`Función "${autoInstantiatedFn}" graficada con entradas INPUT y HALT`);
+                } else {
+                    showToast('Python graficado en bloques, ensamblado y listo para Logisim');
+                }
+            } catch (err) {
+                showToast('Error Python: ' + err.message);
+            }
+        }
+
+        // =========================================================================
+        // EJEMPLOS PRECARGADOS Y UTILIDADES
+        // =========================================================================
+        function clearCanvas() {
+            nodes = [];
+            connections = [];
+            nextNodeId = 1;
+            selectedNodeId = null;
+            renderAll();
+            compileGraph();
+        }
+
+        function loadExampleMax5() {
+            clearCanvas();
+            const in1 = createNode('INPUT', 30, 20,  { count: 1 });
+            const in2 = createNode('INPUT', 30, 115, { count: 1 });
+            const in3 = createNode('INPUT', 30, 210, { count: 1 });
+            const in4 = createNode('INPUT', 30, 305, { count: 1 });
+            const in5 = createNode('INPUT', 30, 400, { count: 1 });
+
+            const maxNode = createNode('MAX', 310, 210);
+            const haltNode = createNode('HALT', 570, 210);
+
+            [in1, in2, in3, in4, in5].forEach(inp => {
+                connections.push({
+                    id: 'conn_' + inp.id + '_max',
+                    fromNode: inp.id,
+                    toNode: maxNode.id
+                });
+            });
+
+            connections.push({
+                id: 'conn_max_halt',
+                fromNode: maxNode.id,
+                toNode: haltNode.id
+            });
+
+            renderAll();
+            compileGraph();
+            showToast('Cargado: 5 Entradas ➔ Mayor (MAX) ➔ Salida / HALT');
+        }
+
+        function loadExampleSum2() {
+            clearCanvas();
+            const in1 = createNode('INPUT', 40, 80, { count: 1 });
+            const c1  = createNode('CONST', 40, 230, { name: 'DIEZ', ramAddr: 31, value: 10 });
+            const addNode = createNode('ADD', 320, 155);
+            const haltNode = createNode('HALT', 580, 155);
+
+            connections.push({ id: 'c_1', fromNode: in1.id, toNode: addNode.id });
+            connections.push({ id: 'c_2', fromNode: c1.id, toNode: addNode.id });
+            connections.push({ id: 'c_3', fromNode: addNode.id, toNode: haltNode.id });
+
+            renderAll();
+            compileGraph();
+            showToast('Cargado: Entrada + Constante (10) ➔ Salida / HALT');
+        }
+
+        function switchTab(tab) {
+            ['hex', 'asm', 'ram', 'py'].forEach(t => {
+                document.getElementById(`tab-${t}`).classList.add('hidden');
+                const btn = document.getElementById(`tab-btn-${t}`);
+                btn.classList.remove('border-blue-500', 'text-blue-400', 'bg-slate-800/40');
+                btn.classList.add('border-transparent', 'text-slate-400');
+            });
+
+            document.getElementById(`tab-${tab}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`tab-btn-${tab}`);
+            activeBtn.classList.add('border-blue-500', 'text-blue-400', 'bg-slate-800/40');
+            activeBtn.classList.remove('border-transparent', 'text-slate-400');
+        }
+
+        function copyHexToClipboard() {
+            const text = document.getElementById('hex-output').innerText;
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            showToast('Código .hex copiado al portapapeles');
+        }
+
+        function downloadHexFile() {
+            const content = document.getElementById('hex-output').innerText;
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'memoria_ar2.hex';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('Descargando memoria_ar2.hex para Logisim...');
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.style.opacity = '1';
+            clearTimeout(window._toastTimer);
+            window._toastTimer = setTimeout(() => {
+                t.style.opacity = '0';
+            }, 2600);
+        }
+
+        window.onload = () => {
+            loadExampleMax5();
+        };
+        window.addEventListener('resize', renderWires);
+    </script>
+</body>
+</html>
